@@ -14,10 +14,8 @@ from __future__ import division
 import os
 import sys
 from datetime import datetime, timedelta
-from atom.api import (
-    Enum, Float, Int, Bool, Instance, ContainerList, Range, Str,
-    Dict, Callable, observe
-)
+from atom.api import (Enum, Float, Int, Bool, Instance, ContainerList, Range,
+                      Str, Dict, Callable, observe)
 from contextlib import contextmanager
 from enaml.qt.QtGui import QPainterPath, QTransform
 from enaml.qt.QtCore import QPointF, QRectF
@@ -25,7 +23,6 @@ from enaml.colors import ColorMember
 from inkcut.core.api import Model, AreaBase
 from inkcut.core.svg import QtSvgDoc
 from inkcut.core.utils import split_painter_path, log
-
 
 from . import filters
 from . import ordering
@@ -74,8 +71,8 @@ class JobInfo(Model):
     paused = Bool()
 
     #: Flags
-    status = Enum('staged', 'waiting', 'running', 'error',
-                  'approved', 'cancelled', 'complete').tag(config=True)
+    status = Enum('staged', 'waiting', 'running', 'error', 'approved',
+                  'cancelled', 'complete').tag(config=True)
 
     #: Stats
     created = Instance(datetime).tag(config=True)
@@ -131,7 +128,7 @@ class JobInfo(Model):
         if not self.length or not self.speed:
             self.duration = timedelta()
             return
-        dt = self.length/self.speed
+        dt = self.length / self.speed
         self.duration = timedelta(seconds=dt)
 
 
@@ -161,8 +158,8 @@ class Job(Model):
         config=True, help="automatically scale if it's too big for the area")
 
     mirror = ContainerList(Bool(), default=[False, False]).tag(config=True)
-    align_center = ContainerList(Bool(),
-                                 default=[False, False]).tag(config=True)
+    align_center = ContainerList(Bool(), default=[False,
+                                                  False]).tag(config=True)
 
     # Shifting of original file
     auto_shift = Bool(True).tag(config=True, help="shift to start at origin")
@@ -173,17 +170,17 @@ class Job(Model):
         config=True, help="automatically rotate if it saves space")
 
     copies = Int(1).tag(config=True)
-    auto_copies = Bool(False).tag(
-        config=True, help="always use a full stack")
-    copy_spacing = ContainerList(Float(),
-                                 default=[10, 10]).tag(config=True)
+    auto_copies = Bool(False).tag(config=True, help="always use a full stack")
+    copy_spacing = ContainerList(Float(), default=[10, 10]).tag(config=True)
     copy_weedline = Bool(False).tag(config=True)
-    copy_weedline_padding = ContainerList(
-        Float(), default=[10, 10, 10, 10]).tag(config=True)
+    copy_weedline_padding = ContainerList(Float(),
+                                          default=[10, 10, 10,
+                                                   10]).tag(config=True)
 
     plot_weedline = Bool(False).tag(config=True)
-    plot_weedline_padding = ContainerList(
-        Float(), default=[10, 10, 10, 10]).tag(config=True)
+    plot_weedline_padding = ContainerList(Float(),
+                                          default=[10, 10, 10,
+                                                   10]).tag(config=True)
 
     order = Enum(*sorted(ordering.REGISTRY.keys())).tag(config=True)
 
@@ -192,6 +189,20 @@ class Job(Model):
 
     feed_to_end = Bool(False).tag(config=True)
     feed_after = Float(0).tag(config=True)
+
+    origin_position = Enum('bottom_left', 'bottom_center', 'bottom_right',
+                           'middle_left', 'middle_center', 'middle_right',
+                           'top_left', 'top_center',
+                           'top_right').tag(config=True)
+
+    def _default_origin_position(self):
+        return 'bottom_left'
+
+    # TEMPORARY: Observer to log changes (for testing)
+    @observe('origin_position')
+    def _log_origin_change(self, change):
+        if change['type'] == 'update':
+            log.info(f"Origin position changed to: {change['value']}")
 
     stack_size = ContainerList(Int(), default=[0, 0])
 
@@ -227,7 +238,8 @@ class Job(Model):
     def __getstate__(self):
         """ Exclude any members from the state where document does point to stdin - """
         state = super(Job, self).__getstate__()
-        if state["document"] == "-": # Stdin, would crash the Plugin every second time
+        if state[
+                "document"] == "-":  # Stdin, would crash the Plugin every second time
             state["document"] = ''
         return state
 
@@ -302,7 +314,8 @@ class Job(Model):
         """
         optimized_path = self.optimized_path
         if optimized_path is None:
-            optimized_path = self.optimized_path = self._default_optimized_path()
+            optimized_path = self.optimized_path = self._default_optimized_path(
+            )
         if optimized_path is None:
             log.debug("Path is %s" % self.path)
             raise ValueError("Path is empty")
@@ -314,7 +327,7 @@ class Job(Model):
         t.scale(
             self.scale[0] * (self.mirror[0] and -1 or 1),
             self.scale[1] * (self.mirror[1] and -1 or 1),
-            )
+        )
 
         self.copy_bbox = t.mapRect(bbox)
 
@@ -433,19 +446,19 @@ class Job(Model):
         # Determine padding
         bbox = model.boundingRect()
         if self.align_center[0]:
-            px = (self.material.width() - bbox.width())/2.0
+            px = (self.material.width() - bbox.width()) / 2.0
         else:
             px = self.material.padding_left
 
         if self.align_center[1]:
-            py = -(self.material.height() - bbox.height())/2.0
+            py = -(self.material.height() - bbox.height()) / 2.0
         else:
             py = -self.material.padding_bottom
 
         # Scale and rotate
         if scale:
             model = QTransform.fromScale(*scale).map(model)
-            px, py = px*abs(scale[0]), py*abs(scale[1])
+            px, py = px * abs(scale[0]), py * abs(scale[1])
 
         if swap_xy:
             t = QTransform()
@@ -471,8 +484,7 @@ class Job(Model):
 
         model = QTransform.fromTranslate(tx, ty).map(model)
 
-        end_point = (QPointF(
-            0, -self.feed_after + model.boundingRect().top())
+        end_point = (QPointF(0, -self.feed_after + model.boundingRect().top())
                      if self.feed_to_end else QPointF(0, 0))
         model.moveTo(end_point)
 
@@ -489,7 +501,7 @@ class Job(Model):
         """ Generator that creates positions of points
 
         """
-        other_axis = axis +1 % 2
+        other_axis = axis + 1 % 2
         p = [0, 0]
 
         bbox = path.boundingRect()
@@ -501,18 +513,20 @@ class Job(Model):
             p[axis] = 0
             yield p  # Beginning of each row
 
-            for i in range(stack_size[axis]-1):
-                p[axis] += d[axis]+pad[axis]
+            for i in range(stack_size[axis] - 1):
+                p[axis] += d[axis] + pad[axis]
                 yield p
 
-            p[other_axis] += d[other_axis]+pad[other_axis]
+            p[other_axis] += d[other_axis] + pad[other_axis]
 
     def _compute_stack_sizes(self, path):
         # Usable area
         material = self.material
         a = [material.width(), material.height()]
-        a[0] -= material.padding[Padding.LEFT] + material.padding[Padding.RIGHT]
-        a[1] -= material.padding[Padding.TOP] + material.padding[Padding.BOTTOM]
+        a[0] -= material.padding[Padding.LEFT] + material.padding[
+            Padding.RIGHT]
+        a[1] -= material.padding[Padding.TOP] + material.padding[
+            Padding.BOTTOM]
 
         # Clone includes weedline but not spacing
         bbox = path.boundingRect()
@@ -522,7 +536,7 @@ class Job(Model):
         p = [0, 0]
         for i in range(2):
             # Compute stack
-            while (p[i]+size[i]) < a[i]:  # while another one fits
+            while (p[i] + size[i]) < a[i]:  # while another one fits
                 stack_size[i] += 1
                 p[i] += size[i] + self.copy_spacing[i]  # Add only to end
 
@@ -604,11 +618,11 @@ class Job(Model):
         stack_size = self.stack_size[0]
         if stack_size == 0:
             self.copies += 1
-            return # Don't divide by 0
+            return  # Don't divide by 0
         copies_left = stack_size - (self.copies % stack_size)
-        if copies_left == 0: # Add full stack
+        if copies_left == 0:  # Add full stack
             self.copies += stack_size
-        else: # Fill stack
+        else:  # Fill stack
             self.copies += copies_left
 
     def remove_stack(self):
@@ -620,7 +634,7 @@ class Job(Model):
             self.copies = 1
             return
         copies_left = self.copies % stack_size
-        if copies_left == 0: # Add full stack
+        if copies_left == 0:  # Add full stack
             self.copies -= stack_size
         else:  # Fill stack
             self.copies -= copies_left
