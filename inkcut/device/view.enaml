@@ -158,6 +158,22 @@ enamldef DeviceConfigView(Container):
                         text = ""
                         checked << model.origin_position == 'bottom_right'
                         clicked :: model.origin_position = 'bottom_right' 
+                Label:
+                    text = QApplication.translate("device", "Feed Axis")
+                Container:
+                    padding = 0
+                    constraints = [
+                        hbox(feed_x_rb, feed_y_rb, spacer),
+                        align('v_center', feed_x_rb, feed_y_rb)
+                    ]
+                    RadioButton: feed_x_rb:
+                        text = "X"
+                        checked << model.feed_axis == 'x'
+                        clicked :: model.feed_axis = 'x' 
+                    RadioButton: feed_y_rb:
+                        text = "Y"
+                        checked << model.feed_axis == 'y'
+                        clicked :: model.feed_axis = 'y'
         Page:
             closable = False
             title = QApplication.translate("device", "Advanced")

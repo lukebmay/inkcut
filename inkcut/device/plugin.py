@@ -299,6 +299,9 @@ class DeviceConfig(Model):
     origin_position = Enum('bottom_left', 'bottom_right', 'top_left',
                            'top_right').tag(config=True)
 
+    #: Feed Axis
+    feed_axis = Enum('x', 'y').tag(config=True)
+
     #: Defines prescaling before conversion to a polygon
     quality_factor = Float(1, strict=False).tag(config=True)
 
