@@ -12,10 +12,10 @@ Created on Dec 7, 2017
 """
 import os
 import textwrap
-from enaml.layout.api import hbox, vbox, spacer, align
+from enaml.layout.api import hbox, vbox, spacer, align, grid
 from enaml.qt.QtWidgets import QApplication
 from enaml.widgets.api import (
-    Form, CheckBox, Container, Label, ProgressBar, PushButton, Notebook, Page, ObjectCombo,
+    Form, CheckBox, Container, Label, RadioButton, ProgressBar, PushButton, Notebook, Page, ObjectCombo,
     Action, Menu, MultilineField
 )
 from enamlx.widgets.api import DoubleSpinBox
@@ -123,7 +123,41 @@ enamldef DeviceConfigView(Container):
                             Suppose your device is 96 ppi, configure 96/90=1.06 here.
                             Suppose your device is 200 points per cm, configure 200*2.54/90=5.64 here.
                             """).strip()
-
+                Label:
+                    text = QApplication.translate("device", "Origin Position")
+                Container:
+                    padding = 0
+                    constraints = [
+                        grid(
+                            (None, left_label, right_label),
+                            (top_label, top_left_rb, top_right_rb),
+                            (bottom_label, bottom_left_rb, bottom_right_rb),
+                        )
+                    ]
+                    Label: left_label:
+                        text = "Left"
+                    Label: right_label:
+                        text = "Right"
+                    Label: top_label:
+                        text = "Top"
+                    Label: bottom_label:
+                        text = "Bottom"
+                    RadioButton: top_left_rb:
+                        text = ""
+                        checked << model.origin_position == 'top_left'
+                        clicked :: model.origin_position = 'top_left'
+                    RadioButton: top_right_rb:
+                        text = ""
+                        checked << model.origin_position == 'top_right'
+                        clicked :: model.origin_position = 'top_right'
+                    RadioButton: bottom_left_rb:
+                        text = ""
+                        checked << model.origin_position == 'bottom_left'
+                        clicked :: model.origin_position = 'bottom_left'
+                    RadioButton: bottom_right_rb:
+                        text = ""
+                        checked << model.origin_position == 'bottom_right'
+                        clicked :: model.origin_position = 'bottom_right' 
         Page:
             closable = False
             title = QApplication.translate("device", "Advanced")

@@ -190,9 +190,7 @@ class Job(Model):
     feed_to_end = Bool(False).tag(config=True)
     feed_after = Float(0).tag(config=True)
 
-    origin_position = Enum('bottom_left', 'bottom_center', 'bottom_right',
-                           'middle_left', 'middle_center', 'middle_right',
-                           'top_left', 'top_center',
+    origin_position = Enum('bottom_left', 'bottom_right', 'top_left',
                            'top_right').tag(config=True)
 
     def _default_origin_position(self):

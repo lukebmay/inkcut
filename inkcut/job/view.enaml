@@ -513,56 +513,31 @@ enamldef MaterialDockItem(DockItem):
                 padding = 0
                 constraints = [
                     grid(
-                        (None, left_label, center_label, right_label),
-                        (top_label, top_left_rb, top_center_rb, top_right_rb),
-                        (middle_label, middle_left_rb, middle_center_rb, middle_right_rb),
-                        (bottom_label, bottom_left_rb, bottom_center_rb, bottom_right_rb),
+                        (None, left_label, right_label),
+                        (top_label, top_left_rb, top_right_rb),
+                        (bottom_label, bottom_left_rb, bottom_right_rb),
                     )
                 ]
                 Label: left_label:
                     text = "Left"
-                Label: center_label:
-                    text = "Center"
                 Label: right_label:
                     text = "Right"
                 Label: top_label:
                     text = "Top"
-                Label: middle_label:
-                    text = "Middle"
                 Label: bottom_label:
                     text = "Bottom"
                 RadioButton: top_left_rb:
                     text = ""
                     checked << job.origin_position == 'top_left'
                     clicked :: job.origin_position = 'top_left'
-                RadioButton: top_center_rb:
-                    text = ""
-                    checked << job.origin_position == 'top_center'
-                    clicked :: job.origin_position = 'top_center'
                 RadioButton: top_right_rb:
                     text = ""
                     checked << job.origin_position == 'top_right'
                     clicked :: job.origin_position = 'top_right'
-                RadioButton: middle_left_rb:
-                    text = ""
-                    checked << job.origin_position == 'middle_left'
-                    clicked :: job.origin_position = 'middle_left'
-                RadioButton: middle_center_rb:
-                    text = ""
-                    checked << job.origin_position == 'middle_center'
-                    clicked :: job.origin_position = 'middle_center'
-                RadioButton: middle_right_rb:
-                    text = ""
-                    checked << job.origin_position == 'middle_right'
-                    clicked :: job.origin_position = 'middle_right'
                 RadioButton: bottom_left_rb:
                     text = ""
                     checked << job.origin_position == 'bottom_left'
                     clicked :: job.origin_position = 'bottom_left'
-                RadioButton: bottom_center_rb:
-                    text = ""
-                    checked << job.origin_position == 'bottom_center'
-                    clicked :: job.origin_position = 'bottom_center'
                 RadioButton: bottom_right_rb:
                     text = ""
                     checked << job.origin_position == 'bottom_right'

@@ -12,10 +12,8 @@ Created on Jan 16, 2015
 """
 import enaml
 import traceback
-from atom.api import (
-    Typed, List, Instance, ForwardInstance, ContainerList, Bool, Str,
-    Int, Float, Enum, Bytes, observe
-)
+from atom.api import (Typed, List, Instance, ForwardInstance, ContainerList,
+                      Bool, Str, Int, Float, Enum, Bytes, observe)
 from contextlib import contextmanager
 from datetime import datetime
 from enaml.qt import QtCore, QtGui
@@ -297,6 +295,10 @@ class DeviceConfig(Model):
     #: Final out scaling
     scale = ContainerList(Float(strict=False), default=[1, 1]).tag(config=True)
 
+    #: Origin position
+    origin_position = Enum('bottom_left', 'bottom_right', 'top_left',
+                           'top_right').tag(config=True)
+
     #: Defines prescaling before conversion to a polygon
     quality_factor = Float(1, strict=False).tag(config=True)
 
@@ -339,7 +341,7 @@ class DeviceConfig(Model):
             return 0
 
         #: No determine the time and convert to ms
-        return max(0, round(1000*self.step_size/speed))
+        return max(0, round(1000 * self.step_size / speed))
 
     @observe('speed', 'speed_units', 'step_size')
     def _update_step_time(self, change):
@@ -387,7 +389,7 @@ class Device(Model):
     queue = List(Model).tag(config=True)
 
     #: Current job being processed
-    job = Instance(Model)#.tag(config=True)
+    job = Instance(Model)  #.tag(config=True)
 
     #: The device specific config
     config = Instance(DeviceConfig, ()).tag(config=True)
@@ -444,7 +446,7 @@ class Device(Model):
 
     def _default_manufacturer(self):
         return self.declaration.manufacturer
-    
+
     def _default_model(self):
         return self.declaration.model
 
@@ -470,8 +472,7 @@ class Device(Model):
             if test:
                 self.connection = TestTransport(
                     protocol=connection.protocol,
-                    declaration=connection.declaration
-                )
+                    declaration=connection.declaration)
             #: Connect
             yield self.connection
         finally:
@@ -489,7 +490,8 @@ class Device(Model):
 
     def clone(self, device_plugin):
         driver = self.declaration
-        new_dev = device_plugin.get_device_from_driver(driver, copy.deepcopy(self.config))
+        new_dev = device_plugin.get_device_from_driver(
+            driver, copy.deepcopy(self.config))
         new_dev.name = self.name
         new_dev.manufacturer = self.manufacturer
         new_dev.model = self.model
@@ -505,7 +507,8 @@ class Device(Model):
                     protocol.config = copy.deepcopy(old_protocol.config)
             else:
                 protocol = DeviceProtocol()
-            new_dev.connection = connection_decl.factory(driver, connection_decl, protocol)
+            new_dev.connection = connection_decl.factory(
+                driver, connection_decl, protocol)
 
         if hasattr(self.connection, "config")\
                 and type(self.connection) == type(new_dev.connection):
@@ -729,13 +732,13 @@ class Device(Model):
                     rate = 0
                 elif config.interpolate:
                     if config.step_time > 0:
-                        rate = config.step_size/float(config.step_time)
+                        rate = config.step_size / float(config.step_time)
                     else:
-                        rate = 0 # Undefined
+                        rate = 0  # Undefined
                 else:
                     rate = from_unit(
                         config.speed,  # in/s or cm/s
-                        config.speed_units.split("/")[0])/1000.0
+                        config.speed_units.split("/")[0]) / 1000.0
 
                 # Device model is updated in real time
                 model = yield defer.maybeDeferred(self.init, job)
@@ -758,7 +761,7 @@ class Device(Model):
 
                 #: So a estimate of the duration can be determined
                 info.length = total_length
-                info.speed = rate*1000  #: Convert to px/s
+                info.speed = rate * 1000  #: Convert to px/s
 
                 #: Waiting for approval
                 info.status = 'waiting'
@@ -778,8 +781,8 @@ class Device(Model):
                 info.started = datetime.now()
 
                 self.status = "Connecting to device"
-                with self.device_connection(
-                                test or config.test_mode) as connection:
+                with self.device_connection(test
+                                            or config.test_mode) as connection:
                     self.status = "Processing job"
                     try:
                         yield defer.maybeDeferred(self.connect)
@@ -794,11 +797,11 @@ class Device(Model):
                         self.status = "Working..."
 
                         if config.force_enabled:
-                            yield defer.maybeDeferred(
-                                protocol.set_force, config.force)
+                            yield defer.maybeDeferred(protocol.set_force,
+                                                      config.force)
                         if config.speed_enabled:
-                            yield defer.maybeDeferred(
-                                protocol.set_velocity, config.speed)
+                            yield defer.maybeDeferred(protocol.set_velocity,
+                                                      config.speed)
 
                         #: For point in the path
                         for (d, cmd, args, kwargs) in self.process(model):
@@ -843,13 +846,16 @@ class Device(Model):
                                 # log.debug("d={}, delay={} t={}".format(
                                 #     d, delay, d/delay
                                 # ))
-                                yield async_sleep(d/rate)
+                                yield async_sleep(d / rate)
 
                             #: TODO: Check if we need to update the ui
                             #: Set the job progress based on how far we've gone
                             if total_length > 0:
-                                info.progress = int(max(0, min(100,
-                                                100*total_moved/total_length)))
+                                info.progress = int(
+                                    max(
+                                        0,
+                                        min(100,
+                                            100 * total_moved / total_length)))
 
                         if info.status != 'error':
                             #: We're done, send any finalization commands
@@ -939,16 +945,16 @@ class Device(Model):
             # curve, we need to prescale by a "quality factor" before
             # converting then undo the scaling to effectively adjust the
             # number of points on a curve.
-            m = QtGui.QTransform.fromScale(
-                config.quality_factor, config.quality_factor)
+            m = QtGui.QTransform.fromScale(config.quality_factor,
+                                           config.quality_factor)
             # Some versions of Qt seem to require a value in toSubpathPolygons
             polypath = model.toSubpathPolygons(m)
 
             if config.quality_factor != 1:
                 # Undo the prescaling, if the quality_factor > 1 the curve
                 # quality will be improved.
-                m_inv = QtGui.QTransform.fromScale(
-                    1/config.quality_factor, 1/config.quality_factor)
+                m_inv = QtGui.QTransform.fromScale(1 / config.quality_factor,
+                                                   1 / config.quality_factor)
                 polypath = list(map(m_inv.map, polypath))
 
             # Apply device filters to polypath
@@ -981,7 +987,7 @@ class Device(Model):
                     #: the path interpolation is skipped entirely
                     if skip_interpolation:
                         x, y = p.x(), p.y()
-                        yield (l, self.move, ([x, y, z],), {})
+                        yield (l, self.move, ([x, y, z], ), {})
                         continue
 
                     #: Where we are within the subpath
@@ -994,7 +1000,7 @@ class Device(Model):
                         #: Now set d to the next point by step_size
                         #: if the end of the path is less than the step size
                         #: use the minimum of the two
-                        dl = min(l-d, step_size)
+                        dl = min(l - d, step_size)
 
                         #: Now find the point at the given step size
                         #: the first point d=0 so t=0, the last point d=l so t=1
@@ -1004,7 +1010,7 @@ class Device(Model):
                         #    break  #: Um don't we want to send the last point??
 
                         x, y = sp.x(), sp.y()
-                        yield (dl, self.move, ([x, y, z],), {})
+                        yield (dl, self.move, ([x, y, z], ), {})
 
                         #: When we reached the end but instead of breaking above
                         #: with a d < l we do it here to ensure we get the last
@@ -1019,7 +1025,7 @@ class Device(Model):
             #: Make sure we get the endpoint
             ep = model.currentPosition()
             x, y = ep.x(), ep.y()
-            yield (0, self.move, ([x, y, 0],), {})
+            yield (0, self.move, ([x, y, 0], ), {})
         except Exception as e:
             log.error("device | processing error: {}".format(
                 traceback.format_exc()))
@@ -1155,13 +1161,16 @@ class DevicePlugin(Plugin):
 
         """
         # Set the protocols based on the declaration
-        transports = [t for t in self.transports
-                      if not driver.connections or t.id == 'disk' or
-                      t.id in driver.connections]
+        transports = [
+            t for t in self.transports if not driver.connections
+            or t.id == 'disk' or t.id in driver.connections
+        ]
 
         # Set the protocols based on the declaration
-        protocols = [p for p in self.protocols
-                     if not driver.protocols or p.id in driver.protocols]
+        protocols = [
+            p for p in self.protocols
+            if not driver.protocols or p.id in driver.protocols
+        ]
 
         # Generate the device
         return driver.factory(driver, transports, protocols, config)
@@ -1283,8 +1292,7 @@ class DevicePlugin(Plugin):
             view_items.append(
                 dict(path=device.transform(r.map(t.map(device.area.path))),
                      pen=plot.pen_device,
-                     skip_autorange=True)
-            )
+                     skip_autorange=True))
 
         if job and job.material:
             # Also observe any change to job.media and job.device
@@ -1292,8 +1300,10 @@ class DevicePlugin(Plugin):
                 dict(path=device.transform(r.map(t.map(job.material.path))),
                      pen=plot.pen_media,
                      skip_autorange=True),
-                dict(path=device.transform(r.map(t.map(job.material.padding_path))),
-                     pen=plot.pen_media_padding, skip_autorange=True)
+                dict(path=device.transform(
+                    r.map(t.map(job.material.padding_path))),
+                     pen=plot.pen_media_padding,
+                     skip_autorange=True)
             ])
 
         #: Update the plot
