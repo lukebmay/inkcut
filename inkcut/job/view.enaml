@@ -507,43 +507,6 @@ enamldef MaterialDockItem(DockItem):
                 checked := job.align_center[1]
         Container:
             padding = 0
-            Label:
-                text = QApplication.translate("job", "Origin Position")
-            Container:
-                padding = 0
-                constraints = [
-                    grid(
-                        (None, left_label, right_label),
-                        (top_label, top_left_rb, top_right_rb),
-                        (bottom_label, bottom_left_rb, bottom_right_rb),
-                    )
-                ]
-                Label: left_label:
-                    text = "Left"
-                Label: right_label:
-                    text = "Right"
-                Label: top_label:
-                    text = "Top"
-                Label: bottom_label:
-                    text = "Bottom"
-                RadioButton: top_left_rb:
-                    text = ""
-                    checked << job.origin_position == 'top_left'
-                    clicked :: job.origin_position = 'top_left'
-                RadioButton: top_right_rb:
-                    text = ""
-                    checked << job.origin_position == 'top_right'
-                    clicked :: job.origin_position = 'top_right'
-                RadioButton: bottom_left_rb:
-                    text = ""
-                    checked << job.origin_position == 'bottom_left'
-                    clicked :: job.origin_position = 'bottom_left'
-                RadioButton: bottom_right_rb:
-                    text = ""
-                    checked << job.origin_position == 'bottom_right'
-                    clicked :: job.origin_position = 'bottom_right'
-        Container:
-            padding = 0
             constraints = [
                 vbox(lbl,
                      rb1,

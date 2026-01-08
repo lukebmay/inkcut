@@ -334,7 +334,6 @@ class DeviceConfig(Model):
     def _default_step_time(self):
         """ Determine the step time based on the device speed setting
 
-
         """
         #: Convert speed to px/s then to mm/s
         units = self.speed_units.split("/")[0]
@@ -345,6 +344,25 @@ class DeviceConfig(Model):
 
         #: No determine the time and convert to ms
         return max(0, round(1000 * self.step_size / speed))
+
+    def _default_origin_position(self):
+        return 'bottom_left'
+
+    def _default_feed_axis(self):
+        return 'y'
+
+    # TEMPORARY: Observers to log changes (for testing)
+    @observe('origin_position')
+    def _log_origin_position_change(self, change):
+        if change['type'] == 'update':
+            log.info(f"CHANGE origin_position changed to: {change['value']}")
+
+    @observe('feed_axis')
+    def _log_feed_axis_change(self, change):
+        if change['type'] == 'update':
+            log.info(f"CHANGE feed_axis changed to: {change['value']}")
+
+    # END TEMPORARY ---------------------------------------
 
     @observe('speed', 'speed_units', 'step_size')
     def _update_step_time(self, change):
@@ -571,22 +589,26 @@ class Device(Model):
                 is then interpolated and sent to the device.
 
         """
-        log.debug("device | init {}".format(job))
         config = self.config
+        log.debug(
+            f"init() with config: origin_position={config.origin_position}, feed_axis={config.feed_axis}, swap_xy={config.swap_xy}, scale={config.scale}, mirror_x={config.mirror_x}, mirror_y={config.mirror_y}"
+        )
+        log.debug("device | init job: {}".format(job))
 
         # Set the speed of this device for tracking purposes
         units = config.speed_units.split("/")[0]
         job.info.speed = from_unit(config.speed, units)
 
         scale = config.scale[:]
-        if config.mirror_x:
-            scale[0] *= -1 if config.mirror_x else 1
-        if config.mirror_y:
-            scale[1] *= -1 if config.mirror_y else 1
+        scale[0] *= -1 if config.mirror_x else 1
+        scale[1] *= -1 if config.mirror_y else 1
 
         # Get the internal QPainterPath "model" transformed to how this
         # device outputs
-        model = job.create(swap_xy=config.swap_xy, scale=scale)
+        model = job.create(swap_xy=config.swap_xy,
+                           scale=scale,
+                           origin_position=config.origin_position,
+                           feed_axis=config.feed_axis)
 
         if job.feed_to_end:
             #: Move the job to the new origin
@@ -1049,10 +1071,7 @@ class Device(Model):
 
 
 class DevicePlugin(Plugin):
-    """ Plugin for configuring, using, and communicating with
-    a device.
-
-    """
+    """ Plugin for configuring, using, and communicating with a device. """
 
     #: Protocols registered in the system
     protocols = List(extensions.DeviceProtocol)
@@ -1071,6 +1090,9 @@ class DevicePlugin(Plugin):
 
     #: Current device
     device = Instance(Device).tag(config=True)
+
+    # Add to track observed config for unobserving
+    _observed_config = Instance(DeviceConfig)
 
     # -------------------------------------------------------------------------
     # Plugin API
@@ -1111,18 +1133,14 @@ class DevicePlugin(Plugin):
         super(DevicePlugin, self).start()
 
     def submit(self, job):
-        """ Send the given job to the device and restart all stats
-
-        """
+        """ Send the given job to the device and restart all stats """
         job.info.reset()
         job.info.started = datetime.now()
         return self.device.submit(job)
 
     def _default_device(self):
         """ If no device is loaded from the previous state, get the device
-        from the first driver loaded.
-
-        """
+        from the first driver loaded. """
         self._refresh_extensions()
 
         #: If a device is configured, use that
@@ -1136,11 +1154,58 @@ class DevicePlugin(Plugin):
         self.devices = [self.get_device_from_driver(self.drivers[0])]
         return self.devices[0]
 
+    @observe('device')
     def _observe_device(self, change):
-        """ Whenever the device changes, redraw """
-        #: Redraw
-        plugin = self.workbench.get_plugin('inkcut.job')
-        plugin.refresh_preview()
+        """ Whenever the device changes, update observers and redraw """
+        if change['type'] == 'update':
+            old_device = change.get('oldvalue')
+            # Unobserve old config
+            if old_device and old_device.config and old_device.config is self._observed_config:
+                old_device.config.unobserve('origin_position',
+                                            self._handle_config_change)
+                old_device.config.unobserve('feed_axis',
+                                            self._handle_config_change)
+                old_device.config.unobserve('swap_xy',
+                                            self._handle_config_change)
+                old_device.config.unobserve('scale',
+                                            self._handle_config_change)
+                old_device.config.unobserve('mirror_x',
+                                            self._handle_config_change)
+                old_device.config.unobserve('mirror_y',
+                                            self._handle_config_change)
+                self._observed_config = None
+
+            # Observe new config
+            if self.device and self.device.config:
+                self.device.config.observe('origin_position',
+                                           self._handle_config_change)
+                self.device.config.observe('feed_axis',
+                                           self._handle_config_change)
+                self.device.config.observe('swap_xy',
+                                           self._handle_config_change)
+                self.device.config.observe('scale', self._handle_config_change)
+                self.device.config.observe('mirror_x',
+                                           self._handle_config_change)
+                self.device.config.observe('mirror_y',
+                                           self._handle_config_change)
+                self._observed_config = self.device.config
+
+            # Redraw
+            plugin = self.workbench.get_plugin('inkcut.job')
+            plugin.refresh_preview()
+
+    def _handle_config_change(self, change):
+        """ Handler for config property changes """
+        if change['type'] == 'update':
+            log.debug(
+                f"Device config changed: {change['name']} to {change['value']}"
+            )
+            # Update job model
+            job_plugin = self.workbench.get_plugin('inkcut.job')
+            if job_plugin.job:
+                job_plugin.job.update_document()
+            # Refresh preview
+            self._reset_preview(change)
 
     # -------------------------------------------------------------------------
     # Device Driver API
@@ -1270,46 +1335,87 @@ class DevicePlugin(Plugin):
 
     @observe('device', 'device.job')
     def _reset_preview(self, change):
-        """ Redraw the preview on the screen
+        """ Redraw the preview on the screen """
+        log.debug("Resetting preview")
 
-        """
         view_items = []
 
-        #: Transform used by the view
         preview_plugin = self.workbench.get_plugin('inkcut.preview')
         plot = preview_plugin.live_preview
         t = preview_plugin.transform
 
-        #: Draw the device
         device = self.device
         job = device.job
+        config = device.config
+        origin_position = config.origin_position
+
+        def get_shifted_rect(area, origin_position):
+            w, h = area.size
+            if origin_position == 'bottom_left':
+                return QtCore.QRectF(0, -h, w, h)
+            elif origin_position == 'bottom_right':
+                return QtCore.QRectF(-w, -h, w, h)
+            elif origin_position == 'top_left':
+                return QtCore.QRectF(0, 0, w, h)
+            elif origin_position == 'top_right':
+                return QtCore.QRectF(-w, 0, w, h)
 
         r = QtGui.QTransform()
-        if device.config.swap_xy:
-            # Rotate area to match swapped axis
+        if config.swap_xy:
             r.rotate(90)
             r.scale(-1, 1)
 
+        # Device area
         if device and device.area:
-            area = device.area
+            area_rect = get_shifted_rect(device.area, origin_position)
+            area_path = QtGui.QPainterPath()
+            area_path.addRect(area_rect)
+            log.debug(f"Device area rect: {area_rect}")
             view_items.append(
-                dict(path=device.transform(r.map(t.map(device.area.path))),
+                dict(path=device.transform(r.map(t.map(area_path))),
                      pen=plot.pen_device,
                      skip_autorange=True))
 
+        # Material and padding
         if job and job.material:
-            # Also observe any change to job.media and job.device
-            view_items.extend([
-                dict(path=device.transform(r.map(t.map(job.material.path))),
+            mat_rect = get_shifted_rect(job.material, origin_position)
+            mat_path = QtGui.QPainterPath()
+            mat_path.addRect(mat_rect)
+            log.debug(f"Material rect: {mat_rect}")
+            view_items.append(
+                dict(path=device.transform(r.map(t.map(mat_path))),
                      pen=plot.pen_media,
-                     skip_autorange=True),
-                dict(path=device.transform(
-                    r.map(t.map(job.material.padding_path))),
-                     pen=plot.pen_media_padding,
-                     skip_autorange=True)
-            ])
+                     skip_autorange=True))
 
-        #: Update the plot
+            # Padding path (inner usable area)
+            padded_rect = mat_rect.adjusted(
+                job.material.padding[Padding.LEFT],
+                job.material.padding[Padding.TOP],
+                -job.material.padding[Padding.RIGHT],
+                -job.material.padding[Padding.BOTTOM])
+            padding_path = QtGui.QPainterPath()
+            padding_path.addRect(padded_rect)
+            log.debug(f"Padding rect: {padded_rect}")
+            view_items.append(
+                dict(path=device.transform(r.map(t.map(padding_path))),
+                     pen=plot.pen_media_padding,
+                     skip_autorange=True))
+
+        # Origin marker
+        marker_path = QtGui.QPainterPath()
+        marker_path.addEllipse(QtCore.QPointF(0, 0), 2,
+                               2)  # Small filled circle
+        font = QtGui.QFont("Arial", 8)
+        marker_path.addText(
+            5, 3, font, "(0,0)")  # Label next to circle, adjust y for baseline
+        view_items.append(
+            dict(
+                path=r.map(t.map(marker_path)),
+                pen=QtGui.QPen(QtCore.Qt.black),
+                brush=QtGui.QBrush(QtCore.Qt.black),  # For filled circle
+                skip_autorange=True))
+
+        # Update the plot
         preview_plugin.set_live_preview(*view_items)
 
     @observe('device.position')

@@ -23,6 +23,7 @@ from enaml.colors import ColorMember
 from inkcut.core.api import Model, AreaBase
 from inkcut.core.svg import QtSvgDoc
 from inkcut.core.utils import split_painter_path, log
+from inkcut.core.workbench import InkcutWorkbench
 
 from . import filters
 from . import ordering
@@ -189,18 +190,6 @@ class Job(Model):
 
     feed_to_end = Bool(False).tag(config=True)
     feed_after = Float(0).tag(config=True)
-
-    origin_position = Enum('bottom_left', 'bottom_right', 'top_left',
-                           'top_right').tag(config=True)
-
-    def _default_origin_position(self):
-        return 'bottom_left'
-
-    # TEMPORARY: Observer to log changes (for testing)
-    @observe('origin_position')
-    def _log_origin_change(self, change):
-        if change['type'] == 'update':
-            log.info(f"Origin position changed to: {change['value']}")
 
     stack_size = ContainerList(Int(), default=[0, 0])
 
@@ -404,10 +393,40 @@ class Job(Model):
         if model:
             self.model = model
 
-    def create(self, swap_xy=False, scale=None):
-        """ Create a path model that is rotated and scaled
+    def create(self,
+               swap_xy=None,
+               scale=None,
+               origin_position=None,
+               feed_axis=None):
+        """ Create a path model that is rotated and scaled """
 
-        """
+        # Fetch from device config if not provided (for preview calls)
+        workbench = InkcutWorkbench.instance()
+        if workbench:
+            device_plugin = workbench.get_plugin('inkcut.device')
+            config = device_plugin.device.config
+
+            if swap_xy is None:
+                swap_xy = config.swap_xy
+            if scale is None:
+                scale = config.scale[:]
+                scale[0] *= -1 if config.mirror_x else 1
+                scale[1] *= -1 if config.mirror_y else 1
+            if origin_position is None:
+                origin_position = config.origin_position
+            if feed_axis is None:
+                feed_axis = config.feed_axis
+        else:
+            # Fallback defaults if no workbench (e.g., tests)
+            swap_xy = False if swap_xy is None else swap_xy
+            scale = [1, 1] if scale is None else scale
+            origin_position = "bottom_left" if origin_position is None else origin_position
+            feed_axis = "y" if feed_axis is None else feed_axis
+
+        log.debug(
+            f"Starting create() with swap_xy={swap_xy}, scale={scale}, origin_position={origin_position}, feed_axis={feed_axis}"
+        )
+
         model = QPainterPath()
 
         if not self.path:
@@ -415,11 +434,10 @@ class Job(Model):
 
         path = self._create_copy()
 
-        # Update size
         bbox = path.boundingRect()
+        log.debug(f"Single copy bbox: {bbox}")
         self.size = [bbox.width(), bbox.height()]
 
-        # Create copies
         c = 0
         points = self._copy_positions_iter(path)
 
@@ -427,7 +445,7 @@ class Job(Model):
             self.stack_size = self._compute_stack_sizes(path)
             if self.stack_size[0]:
                 copies_left = self.copies % self.stack_size[0]
-                if copies_left:  # not a full stack
+                if copies_left:
                     with self.events_suppressed():
                         self.copies = self._desired_copies
                         self.add_stack()
@@ -437,55 +455,120 @@ class Job(Model):
             model.addPath(QTransform.fromTranslate(x, -y).map(path))
             c += 1
 
-        # Create weedline
         if self.plot_weedline:
             self._add_weedline(model, self.plot_weedline_padding)
 
-        # Determine padding
         bbox = model.boundingRect()
+        log.debug(f"Model bbox after copies and weedline: {bbox}")
+
+        padding_left = self.material.padding[Padding.LEFT]
+        padding_right = self.material.padding[Padding.RIGHT]
+        padding_top = self.material.padding[Padding.TOP]
+        padding_bottom = self.material.padding[Padding.BOTTOM]
+
+        # Adjusted px/py calculation to fix the bug: use consistent offset direction
+        # For x: always shift away from origin in extension direction by padding
+        # left origins: +padding_left
+        # right origins: -padding_right (since extension -x, -padding shifts left)
+        # But to match table and right=padding_right for right origins
         if self.align_center[0]:
             px = (self.material.width() - bbox.width()) / 2.0
         else:
-            px = self.material.padding_left
+            if 'left' in origin_position:
+                px = padding_left
+            else:  # right
+                px = padding_right  # Corrected from -bbox.width() + padding_right
 
         if self.align_center[1]:
             py = -(self.material.height() - bbox.height()) / 2.0
         else:
-            py = -self.material.padding_bottom
+            if 'bottom' in origin_position:
+                py = -padding_bottom
+            else:  # top
+                py = padding_top  # Corrected from bbox.height() - padding_top
 
-        # Scale and rotate
+        log.debug(f"Calculated px, py: {px}, {py}")
+
         if scale:
             model = QTransform.fromScale(*scale).map(model)
             px, py = px * abs(scale[0]), py * abs(scale[1])
+            log.debug(f"Applied scale: {scale}")
 
         if swap_xy:
             t = QTransform()
             t.rotate(90)
             model = t.map(model)
+            log.debug("Applied swap_xy rotation")
 
-        # Move to 0,0
         bbox = model.boundingRect()
-        p = bbox.bottomLeft()
+        log.debug(f"Bbox after scale and swap_xy: {bbox}")
+
+        # General corner shift
+        if origin_position == 'bottom_left':
+            p = bbox.bottomLeft()
+        elif origin_position == 'bottom_right':
+            p = bbox.bottomRight()
+        elif origin_position == 'top_left':
+            p = bbox.topLeft()
+        elif origin_position == 'top_right':
+            p = bbox.topRight()
+        else:
+            raise ValueError(f"Invalid origin_position: {origin_position}")
+
         tx, ty = -p.x(), -p.y()
 
         if not self.auto_shift:
-            # Re-add original shift
             bbox = self.copy_bbox
             tx += -bbox.right() if self.mirror[0] else bbox.left()
             ty += bbox.bottom() if self.mirror[1] else -bbox.top()
 
-        # If swapped, make sure padding is still correct
         if swap_xy:
             px, py = -py, -px
+
         tx += px
         ty += py
 
         model = QTransform.fromTranslate(tx, ty).map(model)
 
-        end_point = (QPointF(0, -self.feed_after + model.boundingRect().top())
-                     if self.feed_to_end else QPointF(0, 0))
-        model.moveTo(end_point)
+        bbox = model.boundingRect()
+        log.debug(f"Bbox after origin shift and padding: {bbox}")
 
+        # Reorder subpaths to start with the one closest to (0,0)
+        subpaths = split_painter_path(model)
+        log.debug(f"Number of subpaths: {len(subpaths)}")
+
+        def dist_to_origin(sp):
+            if sp.elementCount() == 0:
+                return float('inf')
+            start = sp.elementAt(0)
+            return (start.x**2 + start.y**2)**0.5
+
+        subpaths.sort(key=dist_to_origin)
+
+        model = QPainterPath()
+        for sp in subpaths:
+            model.addPath(sp)
+
+        log.debug("Reordered subpaths to start closest to origin")
+
+        # Feed offset
+        if self.feed_to_end:
+            if feed_axis == 'x':
+                if 'left' in origin_position:
+                    offset = bbox.right() + self.feed_after
+                else:
+                    offset = bbox.left() - self.feed_after
+                end_point = QPointF(offset, 0)
+            else:
+                if 'bottom' in origin_position:
+                    offset = bbox.top() - self.feed_after
+                else:
+                    offset = bbox.bottom() + self.feed_after
+                end_point = QPointF(0, offset)
+            model.moveTo(end_point)
+            log.debug(f"Added feed_to_end move to {end_point}")
+
+        log.debug(f"Final model bbox: {model.boundingRect()}")
         return model
 
     def _check_bounds(self, plot, area):
