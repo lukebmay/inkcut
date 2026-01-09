@@ -22,7 +22,7 @@ from enaml.qt.QtCore import QPointF, QRectF
 from enaml.colors import ColorMember
 from inkcut.core.api import Model, AreaBase
 from inkcut.core.svg import QtSvgDoc
-from inkcut.core.utils import split_painter_path, log
+from inkcut.core.utils import split_painter_path, log, log_errors
 from inkcut.core.workbench import InkcutWorkbench
 
 from . import filters
@@ -294,6 +294,7 @@ class Job(Model):
         """
         self.optimized_path = self._default_optimized_path()
 
+    @log_errors
     def _create_copy(self):
         """ Creates a copy of the original graphic applying the given
         transforms
@@ -393,6 +394,7 @@ class Job(Model):
         if model:
             self.model = model
 
+    @log_errors
     def create(self,
                swap_xy=None,
                scale=None,

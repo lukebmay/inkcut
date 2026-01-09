@@ -14,6 +14,7 @@ import sys
 import enaml
 from atom.api import Instance, Enum, List, Str, Int, Float, observe
 from inkcut.core.api import Plugin, unit_conversions, log
+from inkcut.core.utils import log_errors
 
 from .models import Job, JobError, Material
 
@@ -177,7 +178,9 @@ class JobPlugin(Plugin):
         if job.material != m:
             job.material = m
 
-    @observe("job", "job.model", "job.material", "material.size", "material.padding")
+    @observe("job", "job.model", "job.material", "material.size",
+             "material.padding")
+    @log_errors
     def _refresh_preview(self, change):
         """Redraw the preview on the screen"""
         log.info(change)
@@ -208,12 +211,10 @@ class JobPlugin(Plugin):
 
         #: The model is only set when a document is open and has no errors
         if job.model:
-            view_items.extend(
-                [
-                    dict(path=transform(job.move_path), pen=plot.pen_up),
-                    dict(path=transform(job.cut_path), pen=plot.pen_down),
-                ]
-            )
+            view_items.extend([
+                dict(path=transform(job.move_path), pen=plot.pen_up),
+                dict(path=transform(job.cut_path), pen=plot.pen_down),
+            ])
 
             #: TODO: This
             # if True:
@@ -226,20 +227,18 @@ class JobPlugin(Plugin):
             #        path=modelt, pen=plot.pen_offset))
         if job.material:
             # Also observe any change to job.media and job.device
-            view_items.extend(
-                [
-                    dict(
-                        path=transform(t.map(job.material.path)),
-                        pen=plot.pen_media,
-                        skip_autorange=([0, job.size[0]], [0, job.size[1]]),
-                    ),
-                    dict(
-                        path=transform(t.map(job.material.padding_path)),
-                        pen=plot.pen_media_padding,
-                        skip_autorange=True,
-                    ),
-                ]
-            )
+            view_items.extend([
+                dict(
+                    path=transform(t.map(job.material.path)),
+                    pen=plot.pen_media,
+                    skip_autorange=([0, job.size[0]], [0, job.size[1]]),
+                ),
+                dict(
+                    path=transform(t.map(job.material.padding_path)),
+                    pen=plot.pen_media_padding,
+                    skip_autorange=True,
+                ),
+            ])
 
         #: Update the plot
         preview_plugin.set_preview(*view_items)

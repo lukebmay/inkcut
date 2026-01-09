@@ -19,7 +19,7 @@ from datetime import datetime
 from enaml.qt import QtCore, QtGui
 from enaml.application import timed_call
 from inkcut.core.api import Model, Plugin, AreaBase
-from inkcut.core.utils import parse_unit, from_unit, to_unit, async_sleep, log
+from inkcut.core.utils import parse_unit, from_unit, to_unit, async_sleep, log, log_errors
 from twisted.internet import defer
 from io import BytesIO
 from . import extensions
@@ -1132,6 +1132,14 @@ class DevicePlugin(Plugin):
         #: Restore state after plugins are loaded
         super(DevicePlugin, self).start()
 
+        # Manually trigger observer setup for initial device
+        if self.device:
+            self._observe_device({
+                'type': 'update',
+                'value': self.device,
+                'oldvalue': None
+            })
+
     def submit(self, job):
         """ Send the given job to the device and restart all stats """
         job.info.reset()
@@ -1334,6 +1342,7 @@ class DevicePlugin(Plugin):
         self._reset_preview(None)
 
     @observe('device', 'device.job')
+    @log_errors
     def _reset_preview(self, change):
         """ Redraw the preview on the screen """
         log.debug("Resetting preview")
@@ -1370,22 +1379,31 @@ class DevicePlugin(Plugin):
             area_rect = get_shifted_rect(device.area, origin_position)
             area_path = QtGui.QPainterPath()
             area_path.addRect(area_rect)
-            log.debug(f"Device area rect: {area_rect}")
+            transformed_area = device.transform(r.map(t.map(area_path)))
+            log.debug(f"Device area rect (raw): {area_rect}")
+            log.debug(
+                f"Device area bbox (transformed): {transformed_area.boundingRect()}"
+            )
             view_items.append(
-                dict(path=device.transform(r.map(t.map(area_path))),
+                dict(path=transformed_area,
                      pen=plot.pen_device,
-                     skip_autorange=True))
+                     skip_autorange=False)
+            )  # Include in autorange to ensure visibility
 
         # Material and padding
         if job and job.material:
             mat_rect = get_shifted_rect(job.material, origin_position)
             mat_path = QtGui.QPainterPath()
             mat_path.addRect(mat_rect)
-            log.debug(f"Material rect: {mat_rect}")
+            transformed_mat = device.transform(r.map(t.map(mat_path)))
+            log.debug(f"Material rect (raw): {mat_rect}")
+            log.debug(
+                f"Material bbox (transformed): {transformed_mat.boundingRect()}"
+            )
             view_items.append(
-                dict(path=device.transform(r.map(t.map(mat_path))),
+                dict(path=transformed_mat,
                      pen=plot.pen_media,
-                     skip_autorange=True))
+                     skip_autorange=False))  # Include in autorange
 
             # Padding path (inner usable area)
             padded_rect = mat_rect.adjusted(
@@ -1395,26 +1413,42 @@ class DevicePlugin(Plugin):
                 -job.material.padding[Padding.BOTTOM])
             padding_path = QtGui.QPainterPath()
             padding_path.addRect(padded_rect)
-            log.debug(f"Padding rect: {padded_rect}")
+            transformed_padding = device.transform(r.map(t.map(padding_path)))
+            log.debug(f"Padding rect (raw): {padded_rect}")
+            log.debug(
+                f"Padding bbox (transformed): {transformed_padding.boundingRect()}"
+            )
             view_items.append(
-                dict(path=device.transform(r.map(t.map(padding_path))),
+                dict(path=transformed_padding,
                      pen=plot.pen_media_padding,
-                     skip_autorange=True))
+                     skip_autorange=False))  # Include in autorange
 
-        # Origin marker
+        # Origin marker - larger, red outline only (no brush if not supported), thicker pen
         marker_path = QtGui.QPainterPath()
-        marker_path.addEllipse(QtCore.QPointF(0, 0), 2,
-                               2)  # Small filled circle
-        font = QtGui.QFont("Arial", 8)
-        marker_path.addText(
-            5, 3, font, "(0,0)")  # Label next to circle, adjust y for baseline
+        marker_path.addEllipse(QtCore.QPointF(0, 0), 10, 10)  # Larger circle
+        font = QtGui.QFont("Arial", 12)  # Larger font
+        marker_path.addText(15, 10, font, "(0,0)")  # Adjusted position
+        transformed_marker = r.map(
+            t.map(marker_path))  # No device.transform for marker
+        log.debug(
+            f"Marker bbox (transformed): {transformed_marker.boundingRect()}")
         view_items.append(
             dict(
-                path=r.map(t.map(marker_path)),
-                pen=QtGui.QPen(QtCore.Qt.black),
-                brush=QtGui.QBrush(QtCore.Qt.black),  # For filled circle
-                skip_autorange=True))
+                path=transformed_marker,
+                pen=QtGui.QPen(QtCore.Qt.red,
+                               2),  # Thicker red pen for visibility, no brush
+                skip_autorange=False))  # Include in autorange
 
+        # Log design bbox if job exists
+        if job and job.model:
+            design_bbox = job.model.boundingRect()
+            transformed_design = device.transform(r.map(t.map(job.model)))
+            log.debug(f"Design bbox (raw): {design_bbox}")
+            log.debug(
+                f"Design bbox (transformed): {transformed_design.boundingRect()}"
+            )
+
+        log.debug(f"ALL view_items: \n{"\n".join(map(str, view_items))}\n")
         # Update the plot
         preview_plugin.set_live_preview(*view_items)
 

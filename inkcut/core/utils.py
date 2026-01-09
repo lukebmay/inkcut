@@ -9,6 +9,7 @@ Created on Jul 12, 2015
 
 @author: jrm
 """
+import functools
 import os
 import sys
 import logging
@@ -22,18 +23,30 @@ from enaml.qt.q_resource_helpers import get_cached_qcolor
 from twisted.internet.defer import Deferred
 from .svg import QtSvgDoc
 
-
 # -----------------------------------------------------------------------------
 # Logger
 # -----------------------------------------------------------------------------
 log = logging.getLogger("inkcut")
 
 
+def log_errors(func):
+
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            log.error(f"Error in {func.__name__}: {str(e)}", exc_info=True)
+            raise  # Re-raise to propagate the error
+
+    return wrapper
+
+
 def clip(s, n=1000):
     """Shorten the name of a large value when logging"""
     v = str(s)
     if len(v) > n:
-        v[:n] + "..."
+        v = v[:n] + "..."
     return v
 
 
