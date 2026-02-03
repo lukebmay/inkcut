@@ -5,7 +5,7 @@ Distributed under the terms of the GPL v3 License.
 
 The full license is in the file LICENSE, distributed with this software.
 
-Created on Jul 12, 2015
+Created on Jun 11, 2015
 
 @author: jrm
 """
@@ -33,6 +33,7 @@ class PreviewModel(Model):
     pen_offset = Instance(QPen)
     pen_down = Instance(QPen)
     pen_device = Instance(QPen)
+    pen_origin = Instance(QPen)
 
     def _default_pen_media(self):
         return pg.mkPen((128, 128, 128))
@@ -51,6 +52,9 @@ class PreviewModel(Model):
 
     def _default_pen_down(self):
         return pg.mkPen((128, 128, 128))
+
+    def _default_pen_origin(self):
+        return pg.mkPen((0, 0, 0), width=2)
 
     def init(self, view_items):
         default_items = []
