@@ -12,3 +12,6 @@ inkcut-*.tar.gz
 /.coverage
 /release
 .directory
+.venv/
+venv/
+env/

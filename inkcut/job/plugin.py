@@ -239,7 +239,7 @@ class JobPlugin(Plugin):
             ])
 
         #: Update the plot
-        preview_plugin.set_preview(*view_items)
+        preview_plugin.set_preview(*view_items, device=device)
 
         #: Save config
         self.save()

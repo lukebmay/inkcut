@@ -1292,27 +1292,45 @@ class DevicePlugin(Plugin):
             r.rotate(90)
             r.scale(-1, 1)
 
+        # Apply origin position transformation to shift design to correct quadrant
+        origin_transform = QtGui.QTransform()
+        if device and device.area:
+            area = device.area
+            width = area.size[0]
+            height = area.size[1]
+            
+            if device.config.origin_position == 'bottom_right':
+                # Shift design left (negative X)
+                origin_transform.translate(-width, 0)
+            elif device.config.origin_position == 'top_left':
+                # Shift design down (negative Y)
+                origin_transform.translate(0, -height)
+            elif device.config.origin_position == 'top_right':
+                # Shift design down-left (negative X and Y)
+                origin_transform.translate(-width, -height)
+            # bottom_left needs no shift (design stays in Q I)
+
         if device and device.area:
             area = device.area
             view_items.append(
-                dict(path=device.transform(r.map(t.map(device.area.path))),
+                dict(path=device.transform(origin_transform.map(r.map(t.map(device.area.path)))),
                      pen=plot.pen_device,
                      skip_autorange=True))
 
         if job and job.material:
             # Also observe any change to job.media and job.device
             view_items.extend([
-                dict(path=device.transform(r.map(t.map(job.material.path))),
+                dict(path=device.transform(origin_transform.map(r.map(t.map(job.material.path)))),
                      pen=plot.pen_media,
                      skip_autorange=True),
                 dict(path=device.transform(
-                    r.map(t.map(job.material.padding_path))),
+                    origin_transform.map(r.map(t.map(job.material.padding_path)))),
                      pen=plot.pen_media_padding,
                      skip_autorange=True)
             ])
 
         #: Update the plot
-        preview_plugin.set_live_preview(*view_items)
+        preview_plugin.set_live_preview(*view_items, device=device)
 
     @observe('device.position')
     def _update_preview(self, change):

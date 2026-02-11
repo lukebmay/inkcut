@@ -14,7 +14,8 @@ from atom.api import List, Instance, Enum, Bool, Range
 from enaml.qt import QtCore, QtGui
 from inkcut.core.api import Plugin, Model, unit_conversions, log
 from .plot_view import PainterPathPlotItem
-
+from .indicators import OriginIndicator, FeedDirectionIndicator
+from pyqtgraph.graphicsItems.GraphicsObject import GraphicsObject
 
 QPen = QtGui.QPen
 
@@ -60,10 +61,10 @@ class PreviewModel(Model):
         default_items = []
         self.paths = [QtGui.QPainterPath(), QtGui.QPainterPath()]
 
-        default_items.append(PainterPathPlotItem(
-            self.paths[0], pen=self.pen_down))
-        default_items.append(PainterPathPlotItem(
-            self.paths[1], pen=self.pen_up))
+        default_items.append(
+            PainterPathPlotItem(self.paths[0], pen=self.pen_down))
+        default_items.append(
+            PainterPathPlotItem(self.paths[1], pen=self.pen_up))
         self.plot = default_items + view_items
 
     def update(self, position):
@@ -96,43 +97,105 @@ class PreviewPlugin(Plugin):
     show_grid_y = Bool().tag(config=True)
     grid_alpha = Range(value=30, low=1, high=100).tag(config=True)
 
-
     def _default_transform(self):
         """ Qt displays top to bottom so this can be used to flip it.
 
         """
         return QtGui.QTransform.fromScale(1, -1)
 
-    def set_preview(self, *items):
+    def set_preview(self, *items, device=None):
         """ Sets the items that will be displayed in the plot
 
         Parameters
         ----------
-        items: list of kwargs
-            A list of kwargs to to pass to each plot item
+        items: list of kwargs or GraphicsObject
+            A list of kwargs to pass to each plot item, or GraphicsObject items
+        device: Device instance (optional)
+            Device configuration for adding origin and feed direction indicators
 
         """
         t = self.transform
-        view_items = [
-            PainterPathPlotItem(kwargs.pop('path'), **kwargs)
-            for kwargs in items
-        ]
+        view_items = []
+        for item in items:
+            # If it's a dict with 'path', convert to PainterPathPlotItem
+            if isinstance(item, dict) and 'path' in item:
+                kwargs = item.copy()
+                view_items.append(
+                    PainterPathPlotItem(kwargs.pop('path'), **kwargs))
+            # If it's already a GraphicsObject, add it directly
+            elif isinstance(item, GraphicsObject):
+                view_items.append(item)
+
+        # Add origin and feed direction indicators if device is provided
+        if device:
+            origin_indicator = OriginIndicator(
+                x=0, y=0, origin_position=device.config.origin_position)
+            view_items.append(origin_indicator)
+
+            # Calculate material dimensions for feed indicator
+            if device.area:
+                material_width = device.area.size[0]
+                material_height = device.area.size[1]
+            else:
+                material_width = 100
+                material_height = 100
+
+            feed_indicator = FeedDirectionIndicator(
+                x=0,
+                y=0,
+                feed_axis=device.config.feed_axis,
+                origin_position=device.config.origin_position,
+                material_width=material_width,
+                material_height=material_height)
+            view_items.append(feed_indicator)
+
         self.preview.plot = view_items
 
-    def set_live_preview(self, *items):
+    def set_live_preview(self, *items, device=None):
         """ Set the items that will be displayed in the live plot preview.
         After set, use live_preview.update(position) to update it.
 
         Parameters
         ----------
-        items: list of kwargs
-            A list of kwargs to to pass to each plot item
+        items: list of kwargs or GraphicsObject
+            A list of kwargs to pass to each plot item, or GraphicsObject items
+        device: Device instance (optional)
+            Device configuration for adding origin and feed direction indicators
 
 
         """
-        view_items = [
-            PainterPathPlotItem(kwargs.pop('path'), **kwargs)
-            for kwargs in items
-        ]
-        self.live_preview.init(view_items)
+        view_items = []
+        for item in items:
+            # If it's a dict with 'path', convert to PainterPathPlotItem
+            if isinstance(item, dict) and 'path' in item:
+                kwargs = item.copy()
+                view_items.append(
+                    PainterPathPlotItem(kwargs.pop('path'), **kwargs))
+            # If it's already a GraphicsObject, add it directly
+            elif isinstance(item, GraphicsObject):
+                view_items.append(item)
 
+        # Add origin and feed direction indicators if device is provided
+        if device:
+            origin_indicator = OriginIndicator(
+                x=0, y=0, origin_position=device.config.origin_position)
+            view_items.append(origin_indicator)
+
+            # Calculate material dimensions for feed indicator
+            if device.area:
+                material_width = device.area.size[0]
+                material_height = device.area.size[1]
+            else:
+                material_width = 100
+                material_height = 100
+
+            feed_indicator = FeedDirectionIndicator(
+                x=0,
+                y=0,
+                feed_axis=device.config.feed_axis,
+                origin_position=device.config.origin_position,
+                material_width=material_width,
+                material_height=material_height)
+            view_items.append(feed_indicator)
+
+        self.live_preview.init(view_items)
