@@ -1338,13 +1338,13 @@ class DevicePlugin(Plugin):
     # Live progress API
     # -------------------------------------------------------------------------
     def reset_preview(self):
-        """ Clear the preview """
+        """ Clear and redraw the preview to the screen """
         self._reset_preview(None)
 
     @observe('device', 'device.job')
     @log_errors
     def _reset_preview(self, change):
-        """ Redraw the preview on the screen """
+        """ Clear and redraw the preview to the screen """
         log.debug("Resetting preview")
 
         view_items = []
@@ -1384,11 +1384,11 @@ class DevicePlugin(Plugin):
             log.debug(
                 f"Device area bbox (transformed): {transformed_area.boundingRect()}"
             )
-            view_items.append(
-                dict(path=transformed_area,
-                     pen=plot.pen_device,
-                     skip_autorange=False)
-            )  # Include in autorange to ensure visibility
+            # view_items.append(
+            #     dict(path=transformed_area,
+            #          pen=plot.pen_device,
+            #          skip_autorange=False)
+            # )  # Include in autorange to ensure visibility
 
         # Material and padding
         if job and job.material:
@@ -1418,10 +1418,10 @@ class DevicePlugin(Plugin):
             log.debug(
                 f"Padding bbox (transformed): {transformed_padding.boundingRect()}"
             )
-            view_items.append(
-                dict(path=transformed_padding,
-                     pen=plot.pen_media_padding,
-                     skip_autorange=False))  # Include in autorange
+            # view_items.append(
+            #     dict(path=transformed_padding,
+            #          pen=plot.pen_media_padding,
+            #          skip_autorange=False))  # Include in autorange
 
         # Origin marker - larger, red outline only (no brush if not supported), thicker pen
         marker_path = QtGui.QPainterPath()
@@ -1449,8 +1449,11 @@ class DevicePlugin(Plugin):
             )
 
         log.debug(f"ALL view_items: \n{"\n".join(map(str, view_items))}\n")
+   
         # Update the plot
         preview_plugin.set_live_preview(*view_items)
+        # Force update with default position
+        plot.update([0, 0, 0])  # Assuming live_preview.update() is for position updates
 
     @observe('device.position')
     def _update_preview(self, change):
@@ -1458,4 +1461,5 @@ class DevicePlugin(Plugin):
         if change['type'] == 'update' and self.device.job:
             x, y, z = change['value']
             preview_plugin = self.workbench.get_plugin('inkcut.preview')
-            preview_plugin.live_preview.update(change['value'])
+            plot = preview_plugin.live_preview
+            plot.update(change['value'])

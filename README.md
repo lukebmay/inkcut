@@ -1,4 +1,22 @@
-# Inkcut
+# Inkcut (Luke fork)
+
+Working fork of [Inkcut](https://github.com/inkcut/inkcut) aimed at correct
+cutter coordinate systems, layered toolpaths, better previews, and smarter weed
+lines (Summa D760 and similar).
+
+**This directory is `inkcut_luke/`** — the only tree to develop in.
+
+| Workspace path | Role |
+| --- | --- |
+| `~/dev/me/inkcut_luke/` | Canonical fork (this repo, branch `refactor1`) |
+| `~/dev/me/inkcut_ai_fail/` | Failed AI rewrite — reference only |
+
+Active plan: [agents/plans/cutter-path-and-coords.md](agents/plans/cutter-path-and-coords.md)  
+Agent rules: [agents/project.md](agents/project.md) · compose with `python3 agentsmd_build.py`
+
+---
+
+# Upstream Inkcut
 
 ![Build Status](https://github.com/inkcut/inkcut/actions/workflows/ci.yml/badge.svg)  [![Downloads](https://pepy.tech/badge/inkcut)](https://pepy.tech/project/inkcut)
 
@@ -40,3 +58,17 @@ please consider [donating](https://www.codelv.com/projects/inkcut/support/).
 ### Thanks
 
 Thank you to [all who have contributed](https://github.com/codelv/inkcut/graphs/contributors) to Inkcut and to [Inkscape](http://inkscape.org/) for making this possible!
+
+### Agents (this fork)
+
+```sh
+python3 agentsmd_build.py           # core rules → AGENTS.md
+python3 agentsmd_build.py --preset=full
+```
+
+| Path | Purpose |
+| --- | --- |
+| `agents/project.md` | Fork-specific agent context |
+| `agents/plans/` | Implementation plans |
+| `agents/tasks/` | Session-sized tasks |
+| `agentsmd_build.py` | Composes root `AGENTS.md` |
