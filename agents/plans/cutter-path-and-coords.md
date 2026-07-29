@@ -2,7 +2,7 @@
 
 | Field | Value |
 | --- | --- |
-| Status | Planning |
+| Status | **Complete (software)** — hardware / upstream residuals noted |
 | Priority | P0 (makes Summa D760 and general cutters trustworthy) |
 | Working tree | **`~/dev/me/inkcut_luke/`** (branch `refactor1`) |
 | Discard / reference only | **`~/dev/me/inkcut_ai_fail/`** (branch `ref2`) — failed AI rewrite |
@@ -229,58 +229,66 @@ Weed segments are `kind='weed'` cuts: they go to the device as blade-down, previ
 - [x] Install agentsmd system (`gen-agentsmd`); write `agents/project.md`.
 - [x] This plan under `agents/plans/cutter-path-and-coords.md` with updated paths.
 - [ ] Optionally tag/archive `inkcut_ai_fail` ref2 so it is not confused later.
-- [ ] Add a one-page `docs/SUMMA_D760.md` (or task note) capturing physical observations once measured.
+- [x] `docs/SUMMA_D760.md` stub (**unverified** expected values; measure later).
 
 ### Phase 1 — ToolpathPlan + epilogue separation (foundation)
 
 **Goal:** return-to-origin / feed-after never pass through job design transforms.
 
-- [ ] Introduce `ToolpathPlan` / `PathSegment` (can live in `inkcut/job/toolpath.py`).
-- [ ] Split `Job.create()` into: build cut geometry → map frame → append epilogue travels.
-- [ ] `Device.init()` consumes plan; concatenate only at protocol boundary.
-- [ ] Preserve current behavior for default bottom-left + feed y as regression baseline.
-- [ ] Unit tests: transform scale/mirror/swap does not move epilogue endpoint off machine origin; feed-after lands on correct axis/sense.
+- [x] Introduce `ToolpathPlan` / `PathSegment` (can live in `inkcut/job/toolpath.py`).
+- [x] Split `Job.create()` into: build cut geometry → map frame → append epilogue travels.
+- [x] `Device.init()` consumes plan; concatenate only at protocol boundary.
+- [x] Preserve current behavior for default bottom-left + feed y as regression baseline.
+- [x] Unit tests: transform scale/mirror/swap does not move epilogue endpoint off machine origin; feed-after lands on correct axis/sense.
 
-**Next task file (when starting):** `agents/tasks/cutter-path-and-coords_phase1-toolpath-plan.md`
+**Completed task:** `agents/plans/cutter-path-and-coords/completed/cutter-path-and-coords_phase1-toolpath-plan.md`
 
 ### Phase 2 — Device frame abstraction (Summa-correct origin)
 
 **Goal:** Summa D760 (and similar) configured without hacky mirrors.
 
-- [ ] Stabilize `origin_corner` + `feed_axis` + `feed_sense` on device config.
-- [ ] Single pure function: `design_to_machine_transform(...)` used by create, precut preview, live preview.
-- [ ] Protocol transforms applied only in `Device.transform` / init protocol stage.
-- [ ] Driver preset or documented config for D760 after hardware tests.
-- [ ] Remove duplicate ad-hoc origin math from preview-only code paths (do not repeat AI rewrite mistake).
+- [x] Stabilize `origin_corner` + `feed_axis` + `feed_sense` on device config.
+- [x] Pure frame helpers (`design_to_machine_transform`, feed end/vector, material rect) in `inkcut/device/frame.py`; used by `build_plan` + live material rect.
+- [x] Protocol transforms applied in `Device.protocol_transform` / init (Phase 5); `build_plan` physical by default.
+- [ ] Driver preset for D760 after hardware tests (stub doc only).
+- [x] Shared `material_rect` for live preview area (full origin/feed markers = Phase 3).
+
+**Completed task:** `agents/plans/cutter-path-and-coords/completed/cutter-path-and-coords_phase2-device-frame.md`
 
 ### Phase 3 — Preview markers + travel toggles
 
 **Goal:** both previews tell the truth about machine space and ordering.
 
-- [ ] Origin + feed indicators on precut and live.
-- [ ] Distinct pens: cut / travel / weed / epilogue (epilogue can share travel color with different dash).
-- [ ] Settings checkboxes; persist in preview plugin config.
-- [ ] Order algorithm changes refresh travel layer clearly.
+- [x] Origin + feed indicators on precut and live.
+- [x] Distinct pens: cut / travel / weed / epilogue (epilogue can share travel color with different dash).
+- [x] Settings checkboxes; persist in preview plugin config.
+- [x] Order algorithm changes refresh travel layer clearly.
 - [ ] Optional: legend in preview.
 
 Salvage carefully from `inkcut_ai_fail/inkcut/preview/indicators/` (origin.py, feed.py); rewrite if coupled to wrong transform assumptions.
+
+**Completed task:** `agents/plans/cutter-path-and-coords/completed/cutter-path-and-coords_phase3-preview-markers.md`
 
 ### Phase 4 — Weed line solvers
 
 **Goal:** peel waste without hand-cutting every time.
 
-- [ ] Refactor `_add_weedline` into weed strategy API.
-- [ ] Implement `frame` + `grid` (clipped).
-- [ ] Implement region nesting + fan or CDT-ish `region` mode for circle+letter class problems.
-- [ ] UI: mode select, spacing, when to apply (plot vs copies), cut order relative to design.
-- [ ] Tests on synthetic SVGs (nested circle+letter, multi-island, open paths edge cases).
+- [x] Refactor `_add_weedline` into weed strategy API.
+- [x] Implement `frame` + `grid` (clipped).
+- [x] Implement region nesting + fan or CDT-ish `region` mode for circle+letter class problems.
+- [x] UI: mode select, spacing, when to apply (plot vs copies), cut order relative to design.
+- [x] Tests on synthetic SVGs (nested circle+letter, multi-island, open paths edge cases).
+
+**Completed task:** `agents/plans/cutter-path-and-coords/completed/cutter-path-and-coords_phase4-weed-solvers.md`
 
 ### Phase 5 — Polish / protocol hardening
 
-- [ ] Filters (overcut, blade offset) operate on cut/weed segments only.
-- [ ] Joystick “move to origin” consistent with frame model.
-- [ ] Docs: device setup for origin/feed; weed modes; path layer legend.
-- [ ] Consider upstream contribution once Summa path is clean.
+- [x] Filters (overcut, blade offset) operate on cut/weed segments only.
+- [x] Joystick “move to origin” consistent with frame model (system = machine 0,0).
+- [x] Docs: `docs/device-frame-and-weeds.md`; weed modes; path layer legend; Summa stub.
+- [ ] Consider upstream contribution once Summa path is clean (out of scope until hardware).
+
+**Completed task:** `agents/plans/cutter-path-and-coords/completed/cutter-path-and-coords_phase5-polish.md`
 
 ---
 
@@ -325,11 +333,25 @@ Salvage carefully from `inkcut_ai_fail/inkcut/preview/indicators/` (origin.py, f
 
 ## Success criteria
 
-1. Return-to-origin returns to **machine origin** after any job scale/rotate/mirror/copies.
-2. Summa D760: origin on the correct side, unroll direction shown and feed-after moves the right way, without abusing design transforms.
-3. Precut and live previews both show origin + feed direction; travel paths toggleable and visually distinct from cuts; ordering algorithms visibly change travel.
-4. Weed mode can split a “circle waste + letter keep” into a few peelable chunks.
-5. Work lands in `inkcut_luke` with tests; `inkcut_ai_fail` not used as runtime base.
+| # | Criterion | Status |
+| --- | --- | --- |
+| 1 | Return-to-origin → **machine origin** after job scale/rotate/mirror/copies | **Met** (epilogue after design map; filters skip epilogue; protocol keeps (0,0)) |
+| 2 | Summa D760: origin side, unroll, feed-after without abusing design transforms | **Software ready**; physical values **unverified** (`docs/SUMMA_D760.md` stub) |
+| 3 | Precut + live: origin/feed markers; travel toggleable; order changes travel | **Met** (Phase 3) |
+| 4 | Weed mode splits circle+letter-class waste | **Met** (region mode; not min-cut optimal) |
+| 5 | Work in `inkcut_luke` with tests; not based on `inkcut_ai_fail` | **Met** |
+
+---
+
+## Residuals (after Phase 5)
+
+- Hardware verification of Summa D760 origin/feed/protocol
+- Named D760 driver preset after measurement
+- Optional preview legend UI
+- Optional tag/archive of `inkcut_ai_fail` ref2
+- Upstream contribution packaging
+- Typed travel segments still thin (pen-up often inside cut path MoveTos)
+- Region weeds: nesting + fan/grid, not CDT / global min cuts
 
 ---
 
@@ -337,3 +359,26 @@ Salvage carefully from `inkcut_ai_fail/inkcut/preview/indicators/` (origin.py, f
 
 - **2026-07-16:** Analysis of former `inkcut/` vs `inkcut1/`; plan drafted.
 - **2026-07-16:** Renamed workspace dirs to `inkcut_ai_fail` and `inkcut_luke`. Installed agentsmd; plan path names updated.
+- **2026-07-16:** Taskforce started Phase 1.
+- **2026-07-16:** **Phase 1 done.** ToolpathPlan + epilogue separation landed; tests green.
+- **2026-07-16:** **Phase 2 done.** `feed_sense` + pure `inkcut/device/frame.py`; protocol split residual.
+- **2026-07-16:** **Phase 3 done.** Shared QPainterPath origin/feed indicators; layer toggles on both previews.
+- **2026-07-16:** **Phase 4 done.** Weed strategy API (`frame`/`grid`/`region`); typed weed plan segments; UI mode+spacing.
+- **2026-07-16:** **Phase 5 done.** Filters cut/weed-only; protocol after physical plan; docs; plan closed (software).
+
+### Session handoff (overwrite; keep short)
+
+**Phase:** 5 complete — **plan closed (software)**  
+**Status:** Complete with residuals (hardware / upstream only)
+
+**Shipped (Phase 5):**
+- Filters skip epilogue (`Device._filter_work_and_epilogue` / process)
+- Protocol via `Device.protocol_transform` + `_apply_protocol_to_plan` after physical `build_plan`
+- Docs: `docs/device-frame-and-weeds.md`, `docs/SUMMA_D760.md` (unverified)
+- Tests: **96 passed**
+
+**Key APIs:** `Device.protocol_transform`, `Device._apply_protocol_to_plan`, `Device._process_plan`
+
+**Residuals:** hardware Summa verify; upstream PR; optional legend; thin typed travel
+
+**Next:** none for this plan

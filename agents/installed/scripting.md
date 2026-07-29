@@ -51,7 +51,7 @@ When telling the user (or auto-running) how to get a missing tool, pick the **fi
 2. **Distro package** — Ubuntu/Debian default: `sudo apt install <pkg>` (real package name only).
 3. **Upstream** — official install URL or documented one-liner; **do not invent** package or binary names.
 
-Examples of shellrc-first tools: `install-yazi`, `user-install-yazi`, `install-fzf`, `install-rg`, `install-nvim`, `install-delta`, …
+Examples of shellrc-first tools: `install-yazi`, `install-fzf`, `install-rg`, `install-nvim`, `install-delta`, …
 
 ### Auto-install on missing deps (ask first)
 

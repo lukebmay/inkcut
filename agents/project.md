@@ -50,10 +50,11 @@ See the plan. Snapshot:
 
 | Issue | Status |
 | --- | --- |
-| Monolithic path; transforms hit return-to-origin | Open (Phase 1) |
-| Incomplete device frame (Summa origin/unroll) | Partial UI; incomplete math |
-| Precut/live previews lack origin + feed marks | Open (Phase 3) |
-| Weed lines = outer box only | Open (Phase 4) |
+| Monolithic path; transforms hit return-to-origin | Done (ToolpathPlan + epilogue) |
+| Incomplete device frame (Summa origin/unroll) | Software done; hardware unverified |
+| Precut/live previews lack origin + feed marks | Done (Phase 3) |
+| Weed lines = outer box only | Done (frame/grid/region) |
+| Protocol vs physical / filter layers | Done (Phase 5; residual: D760 measure) |
 
 ## Project-specific rules
 
