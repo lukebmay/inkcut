@@ -989,7 +989,9 @@ class Device(Model):
                         e = path.elementAt(i)
                         p = yflip.map(QtCore.QPointF(e.x, e.y))
                         epi_pts.append(p)
-                elif seg.kind in ('cut', 'weed', 'travel'):
+                elif seg.kind in ('cut', 'weed'):
+                    # Travel is pen-up only (preview line geom). Pen-up between
+                    # cuts is the first point of each cut subpath (z=0).
                     work.addPath(path)
             work = yflip.map(work)
             return work, epi_pts
@@ -1000,8 +1002,8 @@ class Device(Model):
     def process(self, model):
         """Process the path model of a job and yield device commands.
 
-        Device filters run on cut/weed (and travel) only. Epilogue moves
-        (return-to-origin / feed-after) are appended unfiltered.
+        Device filters run on cut/weed only. Travel is pen-up between cut
+        subpaths (not blade-down). Epilogue moves are appended unfiltered.
         """
         config = self.config
 

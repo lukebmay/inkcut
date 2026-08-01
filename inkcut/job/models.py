@@ -597,28 +597,45 @@ class Job(Model):
         subpaths = split_painter_path(model)
         log.debug("Number of subpaths: %s" % len(subpaths))
 
-        def dist_to_origin(sp):
-            if sp.elementCount() == 0:
-                return float('inf')
-            start = sp.elementAt(0)
-            return (start.x ** 2 + start.y ** 2) ** 0.5
+        # Keep relative order from optimized_path (order algorithm) after
+        # layout/copies. Do not re-sort by distance-to-origin — that undoes
+        # Nearest/etc. Travel segments are derived from this order.
+        segments = []
+        prev = QPointF(0.0, 0.0)  # machine origin (prologue start)
+        _eps = 1e-9
+        cut_union = QPainterPath()
 
-        subpaths.sort(key=dist_to_origin)
-
-        model = QPainterPath()
         for sp in subpaths:
-            model.addPath(sp)
+            if sp is None or sp.elementCount() == 0:
+                continue
+            start_e = sp.elementAt(0)
+            start = QPointF(start_e.x, start_e.y)
+            if (abs(prev.x() - start.x()) > _eps
+                    or abs(prev.y() - start.y()) > _eps):
+                tpath = QPainterPath()
+                tpath.moveTo(prev)
+                tpath.lineTo(start)  # line geom for preview; device → moves
+                segments.append(PathSegment(
+                    kind='travel', path=tpath,
+                    meta={'start': QPointF(prev), 'end': QPointF(start)}))
+            segments.append(PathSegment(kind='cut', path=sp))
+            cut_union.addPath(sp)
+            end_e = sp.elementAt(sp.elementCount() - 1)
+            prev = QPointF(end_e.x, end_e.y)
 
-        log.debug("Reordered subpaths to start closest to origin")
+        model = cut_union
+        log.debug(
+            "Cut subpaths=%s travel=%s (order preserved)" % (
+                sum(1 for s in segments if s.kind == 'cut'),
+                sum(1 for s in segments if s.kind == 'travel')))
 
-        segments = [PathSegment(kind='cut', path=model)]
         if not weed_model.isEmpty():
             segments.append(PathSegment(
                 kind='weed', path=weed_model,
                 meta={'mode': self.weed_mode}))
             log.debug("Added weed segment mode=%s" % self.weed_mode)
 
-        cut_bounds = model.boundingRect()
+        cut_bounds = model.boundingRect() if not model.isEmpty() else QRectF()
         if not weed_model.isEmpty():
             cut_bounds = cut_bounds.united(weed_model.boundingRect())
 

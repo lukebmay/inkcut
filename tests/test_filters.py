@@ -215,3 +215,64 @@ def test_process_filters_skip_epilogue():
     # Cut geometry was shifted by the filter (+50 in pre-Y-flip x → device x)
     xs = [m[0] for m in moves[:-1]]
     assert max(xs) >= 50.0
+
+
+def test_process_filters_skip_epilogue_with_typed_travel():
+    """Filters shift cuts; travel is pen-up; epilogue stays at origin."""
+    from enaml.qt.QtCore import QPointF
+    from enaml.qt.QtGui import QPainterPath, QTransform
+    from inkcut.device.extensions import DeviceDriver
+    from inkcut.device.plugin import Device, DeviceConfig, DeviceFilter
+    from inkcut.job.toolpath import PathSegment, ToolpathPlan
+
+    class ShiftFilter(DeviceFilter):
+        def apply_to_model(self, model, job=None):
+            return QTransform.fromTranslate(50, 0).map(model)
+
+    config = DeviceConfig(test_mode=True, interpolate=False, spooled=True)
+    device = Device(config=config, declaration=DeviceDriver())
+    device.filters = [ShiftFilter()]
+    device.origin = [0, 0, 0]
+
+    cut_a = QPainterPath()
+    cut_a.moveTo(0, 0)
+    cut_a.lineTo(10, 0)
+    cut_a.lineTo(10, 10)
+    cut_a.lineTo(0, 10)
+    cut_a.closeSubpath()
+
+    travel = QPainterPath()
+    travel.moveTo(0, 10)
+    travel.lineTo(30, 0)
+
+    cut_b = QPainterPath()
+    cut_b.moveTo(30, 0)
+    cut_b.lineTo(40, 0)
+    cut_b.lineTo(40, 10)
+    cut_b.lineTo(30, 10)
+    cut_b.closeSubpath()
+
+    epi = QPainterPath()
+    epi.moveTo(0, 0)
+
+    plan = ToolpathPlan(segments=[
+        PathSegment('cut', cut_a),
+        PathSegment('travel', travel, meta={
+            'start': QPointF(0, 10), 'end': QPointF(30, 0)}),
+        PathSegment('cut', cut_b),
+        PathSegment('epilogue', epi, meta={'mode': 'return', 'end': QPointF(0, 0)}),
+    ])
+    device._process_plan = plan
+    device._stream_offset = (0.0, 0.0)
+    stream = plan.to_device_stream()
+
+    moves = []
+    for dist, cmd, args, kwargs in device.process(stream):
+        pos = args[0]
+        moves.append(tuple(pos))
+
+    assert moves[-1][0] == approx(0.0)
+    assert moves[-1][1] == approx(0.0)
+    # Cuts were filtered (shifted); epilogue was not
+    xs = [m[0] for m in moves[:-1]]
+    assert max(xs) >= 50.0

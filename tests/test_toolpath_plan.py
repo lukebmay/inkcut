@@ -346,3 +346,129 @@ def test_device_protocol_feed_uses_post_map_bbox():
     assert ex == pytest.approx(0.0)
     assert ey == pytest.approx(protocol.bounds.top() - 10)
     assert abs(ey) > abs(_epilogue_end(physical)[1])
+
+
+TWO_RECT_SVG = '''<?xml version="1.0"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100">
+  <rect x="10" y="10" width="20" height="20" fill="none" stroke="black"/>
+  <rect x="80" y="40" width="20" height="20" fill="none" stroke="black"/>
+</svg>'''
+
+
+def _job_two_rects(**kwargs):
+    doc = QtSvgDoc(TWO_RECT_SVG)
+    job = Job()
+    job.doc = doc
+    job.path = doc
+    job.optimized_path = doc
+    for k, v in kwargs.items():
+        setattr(job, k, v)
+    return job
+
+
+def test_multi_subpath_emits_typed_travel():
+    """Ordered cuts get explicit travel segments (origin→first and between)."""
+    job = _job_two_rects(feed_to_end=False)
+    plan = job.build_plan(
+        swap_xy=False, scale=[1, 1],
+        origin_corner='bottom_left', feed_axis='y', epilogue='none')
+    assert plan is not None
+    kinds = [s.kind for s in plan.segments]
+    travels = [s for s in plan.segments if s.kind == 'travel']
+    cuts = [s for s in plan.segments if s.kind == 'cut']
+    assert len(cuts) >= 2
+    assert len(travels) >= 1
+    # Travels interleave before cuts (prologue and/or between)
+    assert 'travel' in kinds
+    # Preview path is non-empty line geometry
+    assert not plan.travels().isEmpty()
+    # Device stream ends at last cut (no epilogue); has move-only travels
+    stream = plan.to_device_stream()
+    assert stream.elementCount() > 0
+
+
+def test_travel_device_stream_is_pen_up_only():
+    """Travel vertices in the device stream must be moveTo, not lineTo."""
+    cut_a = QPainterPath()
+    cut_a.moveTo(0, 0)
+    cut_a.lineTo(10, 0)
+
+    travel = QPainterPath()
+    travel.moveTo(10, 0)
+    travel.lineTo(20, 5)
+
+    cut_b = QPainterPath()
+    cut_b.moveTo(20, 5)
+    cut_b.lineTo(30, 5)
+
+    plan = ToolpathPlan(segments=[
+        PathSegment('cut', cut_a),
+        PathSegment('travel', travel, meta={
+            'start': QPointF(10, 0), 'end': QPointF(20, 5)}),
+        PathSegment('cut', cut_b),
+    ])
+    stream = plan.to_device_stream()
+    # Walk stream: after cut_a ends at (10,0), next elements to (20,5) are moves
+    found_move_to_travel_end = False
+    for i in range(stream.elementCount()):
+        e = stream.elementAt(i)
+        if (abs(e.x - 20) < 1e-9 and abs(e.y - 5) < 1e-9
+                and e.isMoveTo()):
+            found_move_to_travel_end = True
+    assert found_move_to_travel_end
+    # No lineTo to the travel end that would imply blade-down travel
+    for i in range(stream.elementCount()):
+        e = stream.elementAt(i)
+        if abs(e.x - 20) < 1e-9 and abs(e.y - 5) < 1e-9:
+            # First hit at (20,5) should be moveTo (start of cut_b or travel)
+            assert e.isMoveTo()
+            break
+
+
+def test_travel_preserves_subpath_order_not_dist_sort():
+    """build_plan must not re-sort subpaths by distance to origin."""
+    # Far-from-origin shape first in document, near-origin second.
+    # With bottom_left origin + padding, order should follow SVG/optimized order.
+    svg = '''<?xml version="1.0"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100">
+  <rect x="100" y="50" width="10" height="10" fill="none" stroke="black"/>
+  <rect x="5" y="5" width="10" height="10" fill="none" stroke="black"/>
+</svg>'''
+    doc = QtSvgDoc(svg)
+    job = Job()
+    job.doc = doc
+    job.path = doc
+    job.optimized_path = doc
+    job.feed_to_end = False
+    job.material.padding = [0.0, 0.0, 0.0, 0.0]
+
+    plan = job.build_plan(
+        swap_xy=False, scale=[1, 1],
+        origin_corner='bottom_left', feed_axis='y', epilogue='none')
+    cuts = [s for s in plan.segments if s.kind == 'cut']
+    assert len(cuts) >= 2
+    # First cut's start should be the first rect in document order (farther x)
+    # after bottom_left origin map: left of first shape mapped relative to
+    # full bbox left. Compare relative starts of the two cut segments.
+    s0 = cuts[0].path.elementAt(0)
+    s1 = cuts[1].path.elementAt(0)
+    # Document order: rect at x=100 then x=5. After origin map both shift by
+    # the same tx; first cut should still start to the right of the second.
+    assert s0.x > s1.x
+
+
+def test_feed_epilogue_after_typed_travels():
+    """Epilogue still last; stream endpoint is feed end with multi-cut plan."""
+    job = _job_two_rects(feed_to_end=True, feed_after=25)
+    plan = job.build_plan(
+        swap_xy=False, scale=[1, 1],
+        origin_corner='bottom_left', feed_axis='y',
+        feed_sense='negative', epilogue='feed')
+    assert plan.segments[-1].kind == 'epilogue'
+    assert any(s.kind == 'travel' for s in plan.segments)
+    ex, ey = _epilogue_end(plan)
+    assert ex == pytest.approx(0.0)
+    assert ey == pytest.approx(plan.bounds.top() - 25)
+    stream_end = _last_point(plan.to_device_stream())
+    assert stream_end[0] == pytest.approx(ex)
+    assert stream_end[1] == pytest.approx(ey)

@@ -116,6 +116,37 @@ def test_plan_layer_paths_prefers_plan_and_synthesizes_travel():
     assert _point_on_path(epi_path, 0, 0)
 
 
+def test_plan_layer_paths_prefers_typed_travels():
+    """When plan has travel segments, use those lines (not moves_to_lines)."""
+    cut_a = QPainterPath()
+    cut_a.moveTo(0, 0)
+    cut_a.lineTo(5, 0)
+    travel = QPainterPath()
+    travel.moveTo(5, 0)
+    travel.lineTo(12, 8)
+    cut_b = QPainterPath()
+    cut_b.moveTo(12, 8)
+    cut_b.lineTo(18, 8)
+    plan = ToolpathPlan(segments=[
+        PathSegment('cut', cut_a),
+        PathSegment('travel', travel, meta={
+            'start': QPointF(5, 0), 'end': QPointF(12, 8)}),
+        PathSegment('cut', cut_b),
+    ])
+    layers = plan_layer_paths(plan=plan)
+    assert _point_on_path(layers['travel'], 5, 0)
+    assert _point_on_path(layers['travel'], 12, 8)
+    # Typed travel preferred: should include the line destination
+    found_line = False
+    for i in range(layers['travel'].elementCount()):
+        e = layers['travel'].elementAt(i)
+        if e.isLineTo() and abs(e.x - 12) < 1e-9 and abs(e.y - 8) < 1e-9:
+            found_line = True
+    assert found_line
+    # Epilogue layer empty without epilogue segments
+    assert layers['epilogue'].isEmpty()
+
+
 def test_plan_layer_paths_fallback_without_plan():
     cut = QPainterPath()
     cut.moveTo(1, 1)

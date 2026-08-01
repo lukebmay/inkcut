@@ -7,7 +7,7 @@
 
 | Pri | Item | Status | Notes |
 | --- | --- | --- | --- |
-| — | *(none)* | — | `cutter-path-and-coords` software complete |
+| P1 | Typed travel segments | TF-A done → TF-B | `agents/tasks/cutter-path-and-coords_typed-travel.md` on `refactor1` |
 
 ## Human (does not block agent queue unless hard)
 
@@ -20,7 +20,6 @@
 
 | Pri | Item | Kind | Notes |
 | --- | --- | --- | --- |
-| P1 | Typed travel segments from cut MoveTos | ready candidate | Plan residual: pen-up often inside cut paths; better travel preview / ordering truth |
 | P2 | Optional preview legend UI | optional | Plan residual; skip unless asked |
 | P3 | Tag/archive `inkcut_ai_fail` ref2 | optional | Housekeeping only |
 

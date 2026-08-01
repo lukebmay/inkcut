@@ -144,12 +144,13 @@ def plan_layer_paths(plan=None, move_path=None, cut_path=None):
     if plan is not None:
         cuts = plan.cuts()
         weeds = plan.weeds()
-        travels = plan.travels()
+        travels = plan.travels()  # line geometry when typed travels present
         layers['cut'] = cuts
         layers['weed'] = weeds
         if travels is not None and not travels.isEmpty():
             layers['travel'] = travels
         else:
+            # Fallback: dig moveTos out of monolithic cut path
             layers['travel'] = moves_to_lines(cuts)
         layers['epilogue'] = epilogue_as_travel(plan)
         return layers

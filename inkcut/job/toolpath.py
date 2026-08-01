@@ -44,6 +44,7 @@ class ToolpathPlan(object):
         return self._concat(('cut',))
 
     def travels(self):
+        """Visible travel lines (preview). Stored as line geometry in segments."""
         return self._concat(('travel',))
 
     def weeds(self):
@@ -55,24 +56,38 @@ class ToolpathPlan(object):
         for seg in self.segments:
             if seg.kind != 'epilogue' or not seg.path:
                 continue
-            self._append_epilogue_path(result, seg.path)
+            self._append_path_elements(result, seg.path)
         return result
 
     def to_device_stream(self):
-        """Concatenate for existing protocols (single QPainterPath)."""
+        """Concatenate for existing protocols (single QPainterPath).
+
+        Cuts/weeds: normal geometry. Travel: pen-up moves only (line geometry
+        in the plan is for preview). Epilogue: move-only, after design map.
+        """
         result = QPainterPath()
         for seg in self.segments:
             if not seg.path or seg.path.elementCount() == 0:
                 continue
-            if seg.kind == 'epilogue':
+            if seg.kind == 'travel':
+                # Preview stores moveTo+lineTo; device must not blade-down
+                self._append_as_moves(result, seg.path)
+            elif seg.kind == 'epilogue':
                 # Pure moveTo paths are dropped by addPath; apply explicitly
-                self._append_epilogue_path(result, seg.path)
+                self._append_path_elements(result, seg.path)
             else:
                 result.addPath(seg.path)
         return result
 
     @staticmethod
-    def _append_epilogue_path(result, path):
+    def _append_as_moves(result, path):
+        """Append every vertex as moveTo (pen-up; no cut edges)."""
+        for i in range(path.elementCount()):
+            e = path.elementAt(i)
+            result.moveTo(e.x, e.y)
+
+    @staticmethod
+    def _append_path_elements(result, path):
         for i in range(path.elementCount()):
             e = path.elementAt(i)
             if e.isMoveTo():
