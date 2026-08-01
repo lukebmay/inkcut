@@ -291,6 +291,28 @@ enamldef WeedlinesDockItem(DockItem):
                 text = QApplication.translate("job", "Add weedline to copies")
                 icon = load_icon('shape_ungroup')
                 checked := job.copy_weedline
+            Form:
+                padding = 0
+                Label:
+                    text = QApplication.translate("job", "Weed mode")
+                ObjectCombo:
+                    items = list(job.__class__.weed_mode.items)
+                    to_string = lambda it: QApplication.translate("job", {
+                        'frame': 'Frame (box)',
+                        'grid': 'Grid (clipped)',
+                        'region': 'Region (nesting)',
+                    }.get(it, it))
+                    selected := job.weed_mode
+                    hug_width = 'ignore'
+                Label:
+                    text = QApplication.translate("job", "Grid spacing")
+                DoubleSpinBox:
+                    value << to_unit(job.weed_grid_spacing, plugin.units)
+                    value :: job.weed_grid_spacing = from_unit(change['value'], plugin.units)
+                    suffix << " "+plugin.units
+                    maximum = 99999.9
+                    minimum = 0.1
+                    single_step = 1.0
         Container:
             padding = 0
 

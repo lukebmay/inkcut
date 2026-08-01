@@ -169,11 +169,35 @@ enamldef DeviceConfigView(Container):
                     RadioButton: feed_x_rb:
                         text = "X"
                         checked << model.feed_axis == 'x'
-                        clicked :: model.feed_axis = 'x' 
+                        clicked :: model.feed_axis = 'x'
                     RadioButton: feed_y_rb:
                         text = "Y"
                         checked << model.feed_axis == 'y'
                         clicked :: model.feed_axis = 'y'
+                Label:
+                    text = QApplication.translate("device", "Feed Sense")
+                Container:
+                    padding = 0
+                    constraints = [
+                        hbox(feed_pos_rb, feed_neg_rb, spacer),
+                        align('v_center', feed_pos_rb, feed_neg_rb)
+                    ]
+                    RadioButton: feed_pos_rb:
+                        text = QApplication.translate("device", "Positive")
+                        checked << model.feed_sense == 'positive'
+                        clicked :: model.feed_sense = 'positive'
+                        tool_tip = textwrap.dedent("""
+                        Feed-after along increasing feed axis (+X or +Y
+                        in machine space after origin mapping).
+                        """).strip()
+                    RadioButton: feed_neg_rb:
+                        text = QApplication.translate("device", "Negative")
+                        checked << model.feed_sense == 'negative'
+                        clicked :: model.feed_sense = 'negative'
+                        tool_tip = textwrap.dedent("""
+                        Feed-after along decreasing feed axis. Default
+                        matches stock bottom-left origin with Y feed.
+                        """).strip()
         Page:
             closable = False
             title = QApplication.translate("device", "Advanced")

@@ -13,7 +13,7 @@ Created on Jan 16, 2015
 import enaml
 import traceback
 from atom.api import (Typed, List, Instance, ForwardInstance, ContainerList,
-                      Bool, Str, Int, Float, Enum, Bytes, observe)
+                      Bool, Str, Int, Float, Enum, Bytes, Value, observe)
 from contextlib import contextmanager
 from datetime import datetime
 from enaml.qt import QtCore, QtGui
@@ -23,6 +23,7 @@ from inkcut.core.utils import parse_unit, from_unit, to_unit, async_sleep, log, 
 from twisted.internet import defer
 from io import BytesIO
 from . import extensions
+from .frame import material_rect, feed_vector
 import copy
 
 
@@ -295,12 +296,15 @@ class DeviceConfig(Model):
     #: Final out scaling
     scale = ContainerList(Float(strict=False), default=[1, 1]).tag(config=True)
 
-    #: Origin position
+    #: Physical origin corner (config key remains origin_position)
     origin_position = Enum('bottom_left', 'bottom_right', 'top_left',
                            'top_right').tag(config=True)
 
     #: Feed Axis
     feed_axis = Enum('x', 'y').tag(config=True)
+
+    #: Feed sense along feed_axis (default negative: stock bottom_left + y)
+    feed_sense = Enum('positive', 'negative').tag(config=True)
 
     #: Defines prescaling before conversion to a polygon
     quality_factor = Float(1, strict=False).tag(config=True)
@@ -351,18 +355,8 @@ class DeviceConfig(Model):
     def _default_feed_axis(self):
         return 'y'
 
-    # TEMPORARY: Observers to log changes (for testing)
-    @observe('origin_position')
-    def _log_origin_position_change(self, change):
-        if change['type'] == 'update':
-            log.info(f"CHANGE origin_position changed to: {change['value']}")
-
-    @observe('feed_axis')
-    def _log_feed_axis_change(self, change):
-        if change['type'] == 'update':
-            log.info(f"CHANGE feed_axis changed to: {change['value']}")
-
-    # END TEMPORARY ---------------------------------------
+    def _default_feed_sense(self):
+        return 'negative'
 
     @observe('speed', 'speed_units', 'step_size')
     def _update_step_time(self, change):
@@ -422,6 +416,11 @@ class Device(Model):
     #: Origin position. Defaults to [0, 0, 0]. The system will translate
     #: jobs to the origin so multiple can be run.
     origin = ContainerList(default=[0, 0, 0])
+
+    #: Last protocol-mapped plan for process() (cut/weed vs epilogue split)
+    _process_plan = Value()
+    #: (dx, dy) applied to stream when stacking after feed-to-end
+    _stream_offset = Value()
 
     #: Device is currently busy processing a job
     busy = Bool()
@@ -537,87 +536,130 @@ class Device(Model):
 
         return new_dev
 
-    def transform(self, path):
-        """ Apply the device output transform to the given path. This
-        is used by other plugins that may need to display or work with
-        tranformed output.
+    def protocol_transform(self):
+        """Protocol-only QTransform (scale, mirrors, swap_xy, rotation).
 
-        Parameters
-        ----------
-            path: QPainterPath
-                Path to transform
-
-        Returns
-        -------
-            path: QPainterPath
-
+        Physical origin/feed are applied earlier in Job.build_plan.
         """
         config = self.config
-
         t = QtGui.QTransform()
-
-        #: Order matters!
-        if config.scale:
-            #: Do final output scaling
-            t.scale(*config.scale)
-
+        sx = float(config.scale[0]) if config.scale else 1.0
+        sy = float(config.scale[1]) if config.scale else 1.0
+        if config.mirror_x:
+            sx = -sx
+        if config.mirror_y:
+            sy = -sy
+        if sx != 1.0 or sy != 1.0:
+            t.scale(sx, sy)
+        if config.swap_xy:
+            t.rotate(90)
         if config.rotation:
-            #: Do final output rotation
             t.rotate(config.rotation)
+        return t
 
-        #: TODO: Translate back to 0,0 so all coordinates are positive
-        path = t.map(path)
+    def transform(self, path):
+        """Apply the device protocol transform to the given path.
 
-        return path
+        Used by previews that want protocol-space display. Physical frame
+        (origin_corner / feed_*) is already in the plan.
+        """
+        return self.protocol_transform().map(path)
+
+    def _apply_protocol_to_plan(self, plan, job):
+        """Map a physical-space plan into protocol space.
+
+        Feed epilogue is recomputed after protocol so feed_after stays relative
+        to the mapped cut bbox (same numeric idea as the old in-plan scale).
+        Return-to-origin stays at (0, 0).
+        """
+        from inkcut.device.frame import feed_end_point
+        from inkcut.job.toolpath import PathSegment, ToolpathPlan
+
+        if plan is None:
+            return None
+        t = self.protocol_transform()
+        if t.isIdentity():
+            return plan
+
+        config = self.config
+        new_segs = []
+        epi_meta = None
+        bounds = QtCore.QRectF()
+        has_bounds = False
+
+        for seg in plan.segments:
+            if seg.kind == 'epilogue':
+                epi_meta = dict(seg.meta) if seg.meta else {}
+                continue
+            path = seg.path
+            if path is not None and path.elementCount() > 0:
+                path = t.map(path)
+            new_segs.append(PathSegment(
+                seg.kind, path, dict(seg.meta) if seg.meta else {}))
+            if seg.kind in ('cut', 'weed') and path and path.elementCount():
+                br = path.boundingRect()
+                if not has_bounds:
+                    bounds = QtCore.QRectF(br)
+                    has_bounds = True
+                else:
+                    bounds = bounds.united(br)
+
+        if epi_meta is not None:
+            mode = epi_meta.get('mode', 'return')
+            if mode == 'feed':
+                end = feed_end_point(
+                    bounds, config.feed_axis,
+                    getattr(config, 'feed_sense', 'negative'),
+                    job.feed_after)
+            else:
+                end = QtCore.QPointF(0.0, 0.0)
+            epi = QtGui.QPainterPath()
+            epi.moveTo(end)
+            new_segs.append(PathSegment(
+                'epilogue', epi, meta={'mode': mode, 'end': end}))
+
+        return ToolpathPlan(
+            segments=new_segs,
+            origin=QtCore.QPointF(0.0, 0.0),
+            feed_vector=plan.feed_vector,
+            bounds=bounds if has_bounds else plan.bounds,
+        )
 
     def init(self, job):
-        """ Initialize the job. This should do any final path manipulation
-        required by the device (or as specified by the config) and any filters
-        should be applied here (overcut, blade offset compensation, etc..).
+        """Initialize the job: physical plan → protocol map → stream.
 
-        The connection is not active at this stage.
-
-        Parameters
-        -----------
-            job: inkcut.job.models.Job instance
-                The job to handle.
-
-        Returns
-        --------
-            model: QtGui.QPainterPath instance or Deferred that resolves
-                to a QPainterPath if heavy processing is needed. This path
-                is then interpolated and sent to the device.
-
+        Filters that rewrite geometry run later in process() on cut/weed only.
         """
         config = self.config
         log.debug(
-            f"init() with config: origin_position={config.origin_position}, feed_axis={config.feed_axis}, swap_xy={config.swap_xy}, scale={config.scale}, mirror_x={config.mirror_x}, mirror_y={config.mirror_y}"
-        )
+            "init() with config: origin_position=%s, feed_axis=%s, "
+            "feed_sense=%s, swap_xy=%s, scale=%s, mirror_x=%s, mirror_y=%s" % (
+                config.origin_position, config.feed_axis, config.feed_sense,
+                config.swap_xy, config.scale, config.mirror_x,
+                config.mirror_y))
         log.debug("device | init job: {}".format(job))
 
-        # Set the speed of this device for tracking purposes
         units = config.speed_units.split("/")[0]
         job.info.speed = from_unit(config.speed, units)
 
-        scale = config.scale[:]
-        scale[0] *= -1 if config.mirror_x else 1
-        scale[1] *= -1 if config.mirror_y else 1
+        # Physical machine frame only; protocol applied next.
+        plan = job.build_plan(
+            origin_corner=config.origin_position,
+            feed_axis=config.feed_axis,
+            feed_sense=config.feed_sense,
+        )
+        protocol_plan = self._apply_protocol_to_plan(plan, job)
+        self._process_plan = protocol_plan
+        model = (protocol_plan.to_device_stream()
+                 if protocol_plan is not None else None)
 
-        # Get the internal QPainterPath "model" transformed to how this
-        # device outputs
-        model = job.create(swap_xy=config.swap_xy,
-                           scale=scale,
-                           origin_position=config.origin_position,
-                           feed_axis=config.feed_axis)
-
-        if job.feed_to_end:
-            #: Move the job to the new origin
+        if job.feed_to_end and model is not None:
             x, y, z = self.origin
             model.translate(x, -y)
+            self._stream_offset = (float(x), float(-y))
+        else:
+            self._stream_offset = (0.0, 0.0)
 
-        #: TODO: Apply filters here
-
-        #: Return the transformed model
         return model
 
     @defer.inlineCallbacks
@@ -924,31 +966,49 @@ class Device(Model):
                 traceback.format_exc()))
             raise
 
+    def _filter_work_and_epilogue(self, model):
+        """Split cut/weed work from epilogue; filters never touch epilogue.
+
+        Returns (work_path_yflipped, epilogue_points_yflipped).
+        """
+        yflip = QtGui.QTransform.fromScale(1, -1)
+        stream_offset = self._stream_offset or (0.0, 0.0)
+        ox, oy = stream_offset[0], stream_offset[1]
+        offset = QtGui.QTransform.fromTranslate(ox, oy)
+        plan = self._process_plan
+
+        if plan is not None and plan.segments:
+            work = QtGui.QPainterPath()
+            epi_pts = []
+            for seg in plan.segments:
+                if not seg.path or seg.path.elementCount() == 0:
+                    continue
+                path = offset.map(seg.path) if (ox or oy) else seg.path
+                if seg.kind == 'epilogue':
+                    for i in range(path.elementCount()):
+                        e = path.elementAt(i)
+                        p = yflip.map(QtCore.QPointF(e.x, e.y))
+                        epi_pts.append(p)
+                elif seg.kind in ('cut', 'weed', 'travel'):
+                    work.addPath(path)
+            work = yflip.map(work)
+            return work, epi_pts
+
+        # Fallback: full stream (includes epilogue if present)
+        return yflip.map(model), []
+
     def process(self, model):
-        """  Process the path model of a job and return each command
-        within the job.
+        """Process the path model of a job and yield device commands.
 
-        Parameters
-        ----------
-            model: QPainterPath
-                The path to process
-
-        Returns
-        -------
-            generator: A list or generator object that yields each command
-             to invoke on the device and the distance moved. In the format
-             (distance, cmd, args, kwargs)
-
+        Device filters run on cut/weed (and travel) only. Epilogue moves
+        (return-to-origin / feed-after) are appended unfiltered.
         """
         config = self.config
 
         # Previous point
         _p = QtCore.QPointF(self.origin[0], self.origin[1])
 
-        # Do a final translation since Qt's y axis is reversed from svg's
-        # It should now be a bbox of (x=0, y=0, width, height)
-        # this creates a copy
-        model = QtGui.QTransform.fromScale(1, -1).map(model)
+        model, epi_pts = self._filter_work_and_epilogue(model)
 
         # Determine if interpolation should be used
         skip_interpolation = (self.connection.always_spools or config.spooled
@@ -960,7 +1020,7 @@ class Device(Model):
         if not skip_interpolation and step_size <= 0:
             raise ValueError("Cannot have a step size <= 0!")
         try:
-            # Apply device filters
+            # Filters: cut/weed only (epilogue held aside)
             for f in self.filters:
                 log.debug(" filter | Running {} on model".format(f))
                 model = f.apply_to_model(model, job=self)
@@ -982,7 +1042,7 @@ class Device(Model):
                                                    1 / config.quality_factor)
                 polypath = list(map(m_inv.map, polypath))
 
-            # Apply device filters to polypath
+            # Apply device filters to polypath (closed-poly filters only)
             for f in self.filters:
                 log.debug(" filter | Running {} on polypath".format(f))
                 polypath = f.apply_to_polypath(polypath)
@@ -1031,8 +1091,6 @@ class Device(Model):
                         #: the first point d=0 so t=0, the last point d=l so t=1
                         t = subpath.percentAtLength(d)
                         sp = subpath.pointAtPercent(t)
-                        #if d == l:
-                        #    break  #: Um don't we want to send the last point??
 
                         x, y = sp.x(), sp.y()
                         yield (dl, self.move, ([x, y, z], ), {})
@@ -1047,9 +1105,22 @@ class Device(Model):
                         #: Add step size
                         d += dl
 
+            # Unfiltered machine epilogue (return / feed-after)
+            for p in epi_pts:
+                subpath = QtGui.QPainterPath()
+                subpath.moveTo(_p)
+                subpath.lineTo(p)
+                l = subpath.length()
+                _p = p
+                x, y = p.x(), p.y()
+                yield (l, self.move, ([x, y, 0], ), {})
+
             #: Make sure we get the endpoint
-            ep = model.currentPosition()
-            x, y = ep.x(), ep.y()
+            if epi_pts:
+                x, y = epi_pts[-1].x(), epi_pts[-1].y()
+            else:
+                ep = model.currentPosition()
+                x, y = ep.x(), ep.y()
             yield (0, self.move, ([x, y, 0], ), {})
         except Exception as e:
             log.error("device | processing error: {}".format(
@@ -1173,6 +1244,8 @@ class DevicePlugin(Plugin):
                                             self._handle_config_change)
                 old_device.config.unobserve('feed_axis',
                                             self._handle_config_change)
+                old_device.config.unobserve('feed_sense',
+                                            self._handle_config_change)
                 old_device.config.unobserve('swap_xy',
                                             self._handle_config_change)
                 old_device.config.unobserve('scale',
@@ -1188,6 +1261,8 @@ class DevicePlugin(Plugin):
                 self.device.config.observe('origin_position',
                                            self._handle_config_change)
                 self.device.config.observe('feed_axis',
+                                           self._handle_config_change)
+                self.device.config.observe('feed_sense',
                                            self._handle_config_change)
                 self.device.config.observe('swap_xy',
                                            self._handle_config_change)
@@ -1356,104 +1431,66 @@ class DevicePlugin(Plugin):
         device = self.device
         job = device.job
         config = device.config
-        origin_position = config.origin_position
 
-        def get_shifted_rect(area, origin_position):
-            w, h = area.size
-            if origin_position == 'bottom_left':
-                return QtCore.QRectF(0, -h, w, h)
-            elif origin_position == 'bottom_right':
-                return QtCore.QRectF(-w, -h, w, h)
-            elif origin_position == 'top_left':
-                return QtCore.QRectF(0, 0, w, h)
-            elif origin_position == 'top_right':
-                return QtCore.QRectF(-w, 0, w, h)
+        # Preview Y-flip + protocol transform (physical plan; no double swap)
+        def map_static(path):
+            return device.transform(t.map(path))
 
-        r = QtGui.QTransform()
-        if config.swap_xy:
-            r.rotate(90)
-            r.scale(-1, 1)
-
-        # Device area
+        # Device area (debug geometry only; not drawn by default)
         if device and device.area:
-            area_rect = get_shifted_rect(device.area, origin_position)
+            area_rect = material_rect(device.area.size, config.origin_position)
             area_path = QtGui.QPainterPath()
             area_path.addRect(area_rect)
-            transformed_area = device.transform(r.map(t.map(area_path)))
-            log.debug(f"Device area rect (raw): {area_rect}")
-            log.debug(
-                f"Device area bbox (transformed): {transformed_area.boundingRect()}"
-            )
-            # view_items.append(
-            #     dict(path=transformed_area,
-            #          pen=plot.pen_device,
-            #          skip_autorange=False)
-            # )  # Include in autorange to ensure visibility
+            log.debug("Device area rect (raw): %s" % area_rect)
 
+        size = None
         # Material and padding
         if job and job.material:
-            mat_rect = get_shifted_rect(job.material, origin_position)
+            size = job.material.size
+            mat_rect = material_rect(job.material.size, config.origin_position)
             mat_path = QtGui.QPainterPath()
             mat_path.addRect(mat_rect)
-            transformed_mat = device.transform(r.map(t.map(mat_path)))
-            log.debug(f"Material rect (raw): {mat_rect}")
+            transformed_mat = map_static(mat_path)
+            log.debug("Material rect (raw): %s" % mat_rect)
             log.debug(
-                f"Material bbox (transformed): {transformed_mat.boundingRect()}"
-            )
+                "Material bbox (transformed): %s" %
+                transformed_mat.boundingRect())
             view_items.append(
                 dict(path=transformed_mat,
                      pen=plot.pen_media,
-                     skip_autorange=False))  # Include in autorange
+                     skip_autorange=False))
+        elif device and device.area:
+            size = device.area.size
 
-            # Padding path (inner usable area)
-            padded_rect = mat_rect.adjusted(
-                job.material.padding[Padding.LEFT],
-                job.material.padding[Padding.TOP],
-                -job.material.padding[Padding.RIGHT],
-                -job.material.padding[Padding.BOTTOM])
-            padding_path = QtGui.QPainterPath()
-            padding_path.addRect(padded_rect)
-            transformed_padding = device.transform(r.map(t.map(padding_path)))
-            log.debug(f"Padding rect (raw): {padded_rect}")
-            log.debug(
-                f"Padding bbox (transformed): {transformed_padding.boundingRect()}"
-            )
-            # view_items.append(
-            #     dict(path=transformed_padding,
-            #          pen=plot.pen_media_padding,
-            #          skip_autorange=False))  # Include in autorange
+        plan = getattr(job, 'plan', None) if job else None
+        feed_dir = None
+        if plan is not None and plan.feed_vector is not None:
+            feed_dir = plan.feed_vector
+        else:
+            feed_dir = feed_vector(config.feed_axis, config.feed_sense)
 
-        # Origin marker - larger, red outline only (no brush if not supported), thicker pen
-        marker_path = QtGui.QPainterPath()
-        marker_path.addEllipse(QtCore.QPointF(0, 0), 10, 10)  # Larger circle
-        font = QtGui.QFont("Arial", 12)  # Larger font
-        marker_path.addText(15, 10, font, "(0,0)")  # Adjusted position
-        transformed_marker = r.map(
-            t.map(marker_path))  # No device.transform for marker
-        log.debug(
-            f"Marker bbox (transformed): {transformed_marker.boundingRect()}")
-        view_items.append(
-            dict(
-                path=transformed_marker,
-                pen=QtGui.QPen(QtCore.Qt.red,
-                               2),  # Thicker red pen for visibility, no brush
-                skip_autorange=False))  # Include in autorange
-
-        # Log design bbox if job exists
+        # Static plan layers + origin/feed (machine space → live map)
         if job and job.model:
-            design_bbox = job.model.boundingRect()
-            transformed_design = device.transform(r.map(t.map(job.model)))
-            log.debug(f"Design bbox (raw): {design_bbox}")
-            log.debug(
-                f"Design bbox (transformed): {transformed_design.boundingRect()}"
-            )
+            view_items.extend(preview_plugin.layer_view_items(
+                plot,
+                plan=plan,
+                move_path=job.move_path,
+                cut_path=job.cut_path,
+                feed_direction=feed_dir,
+                size=size,
+                map_path=map_static,
+            ))
+        else:
+            view_items.extend(preview_plugin.layer_view_items(
+                plot,
+                feed_direction=feed_dir,
+                size=size,
+                map_path=map_static,
+            ))
 
-        log.debug(f"ALL view_items: \n{"\n".join(map(str, view_items))}\n")
-   
         # Update the plot
         preview_plugin.set_live_preview(*view_items)
-        # Force update with default position
-        plot.update([0, 0, 0])  # Assuming live_preview.update() is for position updates
+        plot.update([0, 0, 0])
 
     @observe('device.position')
     def _update_preview(self, change):

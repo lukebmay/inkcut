@@ -166,3 +166,52 @@ def test_min_path():
     result = minline_filter.apply_to_model(doc, None)
 
     assert len(utils.split_painter_path(result)) == 0
+
+
+def test_process_filters_skip_epilogue():
+    """Device.process must not filter return-to-origin / feed epilogue."""
+    from enaml.qt.QtCore import QPointF
+    from enaml.qt.QtGui import QPainterPath, QTransform
+    from inkcut.device.extensions import DeviceDriver
+    from inkcut.device.plugin import Device, DeviceConfig, DeviceFilter
+    from inkcut.job.toolpath import PathSegment, ToolpathPlan
+
+    class ShiftFilter(DeviceFilter):
+        def apply_to_model(self, model, job=None):
+            return QTransform.fromTranslate(50, 0).map(model)
+
+    config = DeviceConfig(test_mode=True, interpolate=False, spooled=True)
+    device = Device(config=config, declaration=DeviceDriver())
+    device.filters = [ShiftFilter()]
+    device.origin = [0, 0, 0]
+
+    cut = QPainterPath()
+    cut.moveTo(0, 0)
+    cut.lineTo(10, 0)
+    cut.lineTo(10, 10)
+    cut.lineTo(0, 10)
+    cut.closeSubpath()
+
+    epi = QPainterPath()
+    epi.moveTo(0, 0)
+
+    plan = ToolpathPlan(segments=[
+        PathSegment('cut', cut),
+        PathSegment('epilogue', epi, meta={'mode': 'return', 'end': QPointF(0, 0)}),
+    ])
+    device._process_plan = plan
+    device._stream_offset = (0.0, 0.0)
+    stream = plan.to_device_stream()
+
+    moves = []
+    for dist, cmd, args, kwargs in device.process(stream):
+        pos = args[0]
+        moves.append(tuple(pos))
+
+    # Final absolute position must remain machine origin (unfiltered)
+    assert moves[-1][0] == approx(0.0)
+    assert moves[-1][1] == approx(0.0)
+
+    # Cut geometry was shifted by the filter (+50 in pre-Y-flip x → device x)
+    xs = [m[0] for m in moves[:-1]]
+    assert max(xs) >= 50.0

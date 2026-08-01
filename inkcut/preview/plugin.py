@@ -10,10 +10,11 @@ Created on Jul 12, 2015
 @author: jrm
 """
 import pyqtgraph as pg
-from atom.api import List, Instance, Enum, Bool, Range
+from atom.api import List, Instance, Enum, Bool, Range, observe
 from enaml.qt import QtCore, QtGui
 from inkcut.core.api import Plugin, Model, unit_conversions, log
 from .plot_view import PainterPathPlotItem
+from . import indicators
 
 
 QPen = QtGui.QPen
@@ -33,6 +34,10 @@ class PreviewModel(Model):
     pen_offset = Instance(QPen)
     pen_down = Instance(QPen)
     pen_device = Instance(QPen)
+    pen_weed = Instance(QPen)
+    pen_epilogue = Instance(QPen)
+    pen_origin = Instance(QPen)
+    pen_feed = Instance(QPen)
 
     def _default_pen_media(self):
         return pg.mkPen((128, 128, 128))
@@ -51,6 +56,18 @@ class PreviewModel(Model):
 
     def _default_pen_down(self):
         return pg.mkPen((128, 128, 128))
+
+    def _default_pen_weed(self):
+        return pg.mkPen(hsv=(0.08, 0.9, 0.85, 0.9))
+
+    def _default_pen_epilogue(self):
+        return pg.mkPen(hsv=(0.53, 1, 0.5, 0.7), style=QtCore.Qt.DashLine)
+
+    def _default_pen_origin(self):
+        return pg.mkPen((200, 40, 40), width=2)
+
+    def _default_pen_feed(self):
+        return pg.mkPen((40, 90, 200), width=2)
 
     def init(self, view_items):
         default_items = []
@@ -92,6 +109,12 @@ class PreviewPlugin(Plugin):
     show_grid_y = Bool().tag(config=True)
     grid_alpha = Range(value=30, low=1, high=100).tag(config=True)
 
+    #: Layer visibility (precut + live static layers)
+    show_cuts = Bool(True).tag(config=True)
+    show_travel = Bool(True).tag(config=True)
+    show_weeds = Bool(True).tag(config=True)
+    show_origin = Bool(True).tag(config=True)
+    show_feed = Bool(True).tag(config=True)
 
     def _default_transform(self):
         """ Qt displays top to bottom so this can be used to flip it.
@@ -132,3 +155,64 @@ class PreviewPlugin(Plugin):
         ]
         self.live_preview.init(view_items)
 
+    def layer_view_items(self, plot, plan=None, move_path=None, cut_path=None,
+                         origin=None, feed_direction=None, size=None,
+                         map_path=None):
+        """Build cut/travel/weed/epilogue + origin/feed items from toggles.
+
+        map_path: optional callable(path) -> path applied to every layer path.
+        """
+        map_path = map_path or (lambda p: p)
+        layers = indicators.plan_layer_paths(
+            plan=plan, move_path=move_path, cut_path=cut_path)
+        items = []
+
+        if self.show_travel and not layers['travel'].isEmpty():
+            items.append(dict(path=map_path(layers['travel']), pen=plot.pen_up))
+        if self.show_cuts and not layers['cut'].isEmpty():
+            items.append(dict(path=map_path(layers['cut']), pen=plot.pen_down))
+        if self.show_weeds and not layers['weed'].isEmpty():
+            items.append(dict(path=map_path(layers['weed']), pen=plot.pen_weed))
+        if self.show_travel and not layers['epilogue'].isEmpty():
+            items.append(dict(
+                path=map_path(layers['epilogue']), pen=plot.pen_epilogue))
+
+        arm = indicators.indicator_length(size)
+        if origin is None and plan is not None:
+            origin = plan.origin
+        if feed_direction is None:
+            feed_direction = indicators.resolve_feed_direction(plan=plan)
+
+        if self.show_origin:
+            o_path = indicators.origin_crosshair_path(origin=origin, arm=arm * 0.35)
+            items.append(dict(
+                path=map_path(o_path),
+                pen=plot.pen_origin,
+                skip_autorange=True,
+            ))
+        if self.show_feed and feed_direction is not None:
+            f_path = indicators.feed_arrow_path(
+                origin=origin, direction=feed_direction, length=arm)
+            items.append(dict(
+                path=map_path(f_path),
+                pen=plot.pen_feed,
+                skip_autorange=True,
+            ))
+        return items
+
+    @observe('show_cuts', 'show_travel', 'show_weeds', 'show_origin',
+             'show_feed')
+    def _on_layer_toggle(self, change):
+        if change.get('type') != 'update':
+            return
+        wb = self.workbench
+        if wb is None:
+            return
+        try:
+            wb.get_plugin('inkcut.job').refresh_preview()
+        except Exception as e:
+            log.debug("preview toggle job refresh: %s" % e)
+        try:
+            wb.get_plugin('inkcut.device').reset_preview()
+        except Exception as e:
+            log.debug("preview toggle live refresh: %s" % e)

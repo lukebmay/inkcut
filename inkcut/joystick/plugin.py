@@ -83,6 +83,7 @@ class JoystickPlugin(Plugin):
 
     @with_connection
     def move_to_origin(self, system=False):
+        # system=True → machine (0,0); else virtual origin after feed-after
         x, y, z = [0, 0, 0] if system else self.device.origin
         self.device.move([x, y, 0], absolute=True)
 

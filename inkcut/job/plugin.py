@@ -211,20 +211,20 @@ class JobPlugin(Plugin):
 
         #: The model is only set when a document is open and has no errors
         if job.model:
-            view_items.extend([
-                dict(path=transform(job.move_path), pen=plot.pen_up),
-                dict(path=transform(job.cut_path), pen=plot.pen_down),
-            ])
+            size = None
+            if job.material:
+                size = job.material.size
+            elif device and device.area:
+                size = device.area.size
+            view_items.extend(preview_plugin.layer_view_items(
+                plot,
+                plan=getattr(job, 'plan', None),
+                move_path=job.move_path,
+                cut_path=job.cut_path,
+                size=size,
+                map_path=transform,
+            ))
 
-            #: TODO: This
-            # if True:
-            #    filters = device.filters
-            #    modelt = job.cut_path
-            #    for f in filters:
-            #        log.debug(" filter | Running {} on model".format(f))
-            #        modelt = f.apply_to_model(modelt, job=device)
-            #    view_items.append(dict(
-            #        path=modelt, pen=plot.pen_offset))
         if job.material:
             # Also observe any change to job.media and job.device
             view_items.extend([

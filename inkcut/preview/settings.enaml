@@ -9,7 +9,7 @@ Created on May 25, 2019
 
 @author: jrm
 """
-from enaml.layout.api import hbox, align, spacer
+from enaml.layout.api import hbox, align, spacer, vbox
 from enaml.widgets.api import Container, Form, Label, CheckBox, SpinBox
 from enaml.qt.QtWidgets import QApplication
 
@@ -37,4 +37,24 @@ enamldef PreviewSettingsPage(Container):
             SpinBox: ga:
                 value := model.grid_alpha
 
-
+        Label:
+            text = QApplication.translate("settings", "Layers")
+        Container:
+            constraints = [
+                vbox(sc, st, sw, so, sf),
+            ]
+            CheckBox: sc:
+                text = QApplication.translate("settings", "Cuts")
+                checked := model.show_cuts
+            CheckBox: st:
+                text = QApplication.translate("settings", "Travel")
+                checked := model.show_travel
+            CheckBox: sw:
+                text = QApplication.translate("settings", "Weed lines")
+                checked := model.show_weeds
+            CheckBox: so:
+                text = QApplication.translate("settings", "Origin")
+                checked := model.show_origin
+            CheckBox: sf:
+                text = QApplication.translate("settings", "Feed direction")
+                checked := model.show_feed

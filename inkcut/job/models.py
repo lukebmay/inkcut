@@ -27,6 +27,13 @@ from inkcut.core.workbench import InkcutWorkbench
 
 from . import filters
 from . import ordering
+from . import weeds as weed_strategies
+from .toolpath import PathSegment, ToolpathPlan
+from inkcut.device.frame import (
+    DEFAULT_FEED_AXIS, DEFAULT_FEED_SENSE, DEFAULT_ORIGIN_CORNER,
+    feed_end_point, feed_vector, normalize_feed_axis, normalize_feed_sense,
+    normalize_origin_corner, origin_shift,
+)
 
 
 class Material(AreaBase):
@@ -183,6 +190,11 @@ class Job(Model):
                                           default=[10, 10, 10,
                                                    10]).tag(config=True)
 
+    #: Weed strategy: frame (box), grid (clipped), region (nesting + fan)
+    weed_mode = Enum(*weed_strategies.WEED_MODES).tag(config=True)
+    weed_grid_spacing = Float(weed_strategies.DEFAULT_GRID_SPACING).tag(
+        config=True)
+
     order = Enum(*sorted(ordering.REGISTRY.keys())).tag(config=True)
 
     def _default_order(self):
@@ -207,6 +219,9 @@ class Job(Model):
     #: Finaly copy using all the applied job properties
     #: This is what is actually cut out
     model = Instance(QPainterPath)
+
+    #: Last built layered plan (machine space; epilogue separate)
+    plan = Instance(object)
 
     _blocked = Bool(False)  # block change events
     _desired_copies = Int(1)  # required for auto copies
@@ -326,15 +341,11 @@ class Job(Model):
             t.rotate(self.rotation)
             t.translate(c.x(), c.y())
 
-        # Apply transform
+        # Apply transform (weeds are separate plan segments; not baked in)
         path = t.map(optimized_path)
 
-        # Add weedline to copy
-        if self.copy_weedline:
-            self._add_weedline(path, self.copy_weedline_padding)
-
-        # If it's too big we have to scale it
-        w, h = path.boundingRect().width(), path.boundingRect().height()
+        # Sizing includes copy weed frame when enabled
+        w, h = self._extent_with_copy_weed(path)
         available_area = self.material.available_area
 
         #: This screws stuff up!
@@ -350,10 +361,18 @@ class Job(Model):
                 s = min(sx, sy)  # Fit to the smaller of the two
                 path = QTransform.fromScale(s, s).map(optimized_path)
 
-        # Save original bbox
+        # Save original bbox (cuts only; layout adds weed pad separately)
         bbox = path.boundingRect()
+        if self.copy_weedline:
+            pad = self.copy_weedline_padding
+            bbox = QRectF(
+                bbox.x() - pad[Padding.LEFT],
+                bbox.y() - pad[Padding.TOP],
+                bbox.width() + pad[Padding.LEFT] + pad[Padding.RIGHT],
+                bbox.height() + pad[Padding.TOP] + pad[Padding.BOTTOM],
+            )
 
-        # Move to bottom left
+        # Move to bottom left of layout extent
         br = bbox.bottomRight()
         path = QTransform.fromTranslate(-br.x(), -br.y()).map(path)
 
@@ -373,7 +392,8 @@ class Job(Model):
     @observe('path', 'scale', 'auto_scale', 'lock_scale', 'mirror',
              'align_center', 'rotation', 'auto_rotate', 'copies', 'order',
              'copy_spacing', 'copy_weedline', 'copy_weedline_padding',
-             'plot_weedline', 'plot_weedline_padding', 'feed_to_end',
+             'plot_weedline', 'plot_weedline_padding', 'weed_mode',
+             'weed_grid_spacing', 'feed_to_end',
              'feed_after', 'material', 'material.size', 'material.padding',
              'auto_copies', 'auto_shift')
     def update_document(self, change=None):
@@ -394,52 +414,87 @@ class Job(Model):
         if model:
             self.model = model
 
-    @log_errors
-    def create(self,
-               swap_xy=None,
-               scale=None,
-               origin_position=None,
-               feed_axis=None):
-        """ Create a path model that is rotated and scaled """
+    def _resolve_device_frame(self, swap_xy, scale, origin_position,
+                              origin_corner, feed_axis, feed_sense):
+        """Fill *physical* frame args from device config or test defaults.
 
-        # Fetch from device config if not provided (for preview calls)
+        Protocol scale/swap/mirrors are **not** taken from device config here.
+        Device.init / Device.transform apply protocol after the plan. Explicit
+        swap_xy/scale kwargs still work (tests / legacy callers).
+        """
+        corner = origin_corner if origin_corner is not None else origin_position
         workbench = InkcutWorkbench.instance()
         if workbench:
             device_plugin = workbench.get_plugin('inkcut.device')
             config = device_plugin.device.config
 
-            if swap_xy is None:
-                swap_xy = config.swap_xy
-            if scale is None:
-                scale = config.scale[:]
-                scale[0] *= -1 if config.mirror_x else 1
-                scale[1] *= -1 if config.mirror_y else 1
-            if origin_position is None:
-                origin_position = config.origin_position
+            if corner is None:
+                corner = config.origin_position
             if feed_axis is None:
                 feed_axis = config.feed_axis
+            if feed_sense is None:
+                feed_sense = getattr(config, 'feed_sense', DEFAULT_FEED_SENSE)
         else:
-            # Fallback defaults if no workbench (e.g., tests)
-            swap_xy = False if swap_xy is None else swap_xy
-            scale = [1, 1] if scale is None else scale
-            origin_position = "bottom_left" if origin_position is None else origin_position
-            feed_axis = "y" if feed_axis is None else feed_axis
+            corner = DEFAULT_ORIGIN_CORNER if corner is None else corner
+            feed_axis = DEFAULT_FEED_AXIS if feed_axis is None else feed_axis
+            feed_sense = (DEFAULT_FEED_SENSE if feed_sense is None
+                          else feed_sense)
+
+        swap_xy = False if swap_xy is None else swap_xy
+        scale = [1, 1] if scale is None else scale
+        origin_corner = normalize_origin_corner(corner)
+        feed_axis = normalize_feed_axis(feed_axis)
+        feed_sense = normalize_feed_sense(feed_sense)
+        return swap_xy, scale, origin_corner, feed_axis, feed_sense
+
+    @log_errors
+    def build_plan(self,
+                   swap_xy=None,
+                   scale=None,
+                   origin_position=None,
+                   origin_corner=None,
+                   feed_axis=None,
+                   feed_sense=None,
+                   epilogue=None):
+        """Build a ToolpathPlan: design cuts → frame map → machine epilogue.
+
+        Parameters
+        ----------
+        origin_corner / origin_position :
+            Physical machine origin corner (origin_position is legacy alias).
+        feed_axis, feed_sense :
+            Feed/unroll axis and direction (positive/negative along axis).
+        epilogue : None | 'none' | 'feed' | 'return'
+            None picks 'feed' when feed_to_end else 'none' (stock match).
+            'return' appends moveTo(0,0) without design transforms.
+        """
+        (swap_xy, scale, origin_corner, feed_axis,
+         feed_sense) = self._resolve_device_frame(
+            swap_xy, scale, origin_position, origin_corner, feed_axis,
+            feed_sense)
+
+        if epilogue is None:
+            epilogue = 'feed' if self.feed_to_end else 'none'
+        if epilogue not in ('none', 'feed', 'return'):
+            raise ValueError("invalid epilogue mode: %r" % (epilogue,))
 
         log.debug(
-            f"Starting create() with swap_xy={swap_xy}, scale={scale}, origin_position={origin_position}, feed_axis={feed_axis}"
-        )
-
-        model = QPainterPath()
+            "Starting build_plan() with swap_xy=%s, scale=%s, "
+            "origin_corner=%s, feed_axis=%s, feed_sense=%s, epilogue=%s" % (
+                swap_xy, scale, origin_corner, feed_axis, feed_sense,
+                epilogue))
 
         if not self.path:
-            return
+            return None
 
         path = self._create_copy()
 
         bbox = path.boundingRect()
-        log.debug(f"Single copy bbox: {bbox}")
+        log.debug("Single copy bbox: %s" % bbox)
         self.size = [bbox.width(), bbox.height()]
 
+        model = QPainterPath()
+        weed_model = QPainterPath()
         c = 0
         points = self._copy_positions_iter(path)
 
@@ -454,70 +509,72 @@ class Job(Model):
 
         while c < self.copies:
             x, y = next(points)
-            model.addPath(QTransform.fromTranslate(x, -y).map(path))
+            placed = QTransform.fromTranslate(x, -y).map(path)
+            model.addPath(placed)
+            if self.copy_weedline:
+                weed_model.addPath(self._weed_path_for(
+                    placed, self.copy_weedline_padding))
             c += 1
 
         if self.plot_weedline:
-            self._add_weedline(model, self.plot_weedline_padding)
+            weed_model.addPath(self._weed_path_for(
+                model, self.plot_weedline_padding))
 
-        bbox = model.boundingRect()
-        log.debug(f"Model bbox after copies and weedline: {bbox}")
+        # Bounds for padding/origin include weeds when present
+        bounds_src = QPainterPath(model)
+        if not weed_model.isEmpty():
+            bounds_src.addPath(weed_model)
+        bbox = bounds_src.boundingRect()
+        log.debug("Model bbox after copies and weedline: %s" % bbox)
 
         padding_left = self.material.padding[Padding.LEFT]
         padding_right = self.material.padding[Padding.RIGHT]
         padding_top = self.material.padding[Padding.TOP]
         padding_bottom = self.material.padding[Padding.BOTTOM]
 
-        # Adjusted px/py calculation to fix the bug: use consistent offset direction
-        # For x: always shift away from origin in extension direction by padding
-        # left origins: +padding_left
-        # right origins: -padding_right (since extension -x, -padding shifts left)
-        # But to match table and right=padding_right for right origins
         if self.align_center[0]:
             px = (self.material.width() - bbox.width()) / 2.0
         else:
-            if 'left' in origin_position:
+            if 'left' in origin_corner:
                 px = padding_left
-            else:  # right
-                px = padding_right  # Corrected from -bbox.width() + padding_right
+            else:
+                px = padding_right
 
         if self.align_center[1]:
             py = -(self.material.height() - bbox.height()) / 2.0
         else:
-            if 'bottom' in origin_position:
+            if 'bottom' in origin_corner:
                 py = -padding_bottom
-            else:  # top
-                py = padding_top  # Corrected from bbox.height() - padding_top
+            else:
+                py = padding_top
 
-        log.debug(f"Calculated px, py: {px}, {py}")
+        log.debug("Calculated px, py: %s, %s" % (px, py))
 
+        # Optional explicit protocol scale/swap (tests/legacy). Device.init
+        # uses identity here and applies protocol after the plan.
         if scale:
             model = QTransform.fromScale(*scale).map(model)
+            if not weed_model.isEmpty():
+                weed_model = QTransform.fromScale(*scale).map(weed_model)
             px, py = px * abs(scale[0]), py * abs(scale[1])
-            log.debug(f"Applied scale: {scale}")
+            log.debug("Applied scale: %s" % scale)
 
         if swap_xy:
             t = QTransform()
             t.rotate(90)
             model = t.map(model)
+            if not weed_model.isEmpty():
+                weed_model = t.map(weed_model)
             log.debug("Applied swap_xy rotation")
 
-        bbox = model.boundingRect()
-        log.debug(f"Bbox after scale and swap_xy: {bbox}")
+        bounds_src = QPainterPath(model)
+        if not weed_model.isEmpty():
+            bounds_src.addPath(weed_model)
+        bbox = bounds_src.boundingRect()
+        log.debug("Bbox after scale and swap_xy: %s" % bbox)
 
-        # General corner shift
-        if origin_position == 'bottom_left':
-            p = bbox.bottomLeft()
-        elif origin_position == 'bottom_right':
-            p = bbox.bottomRight()
-        elif origin_position == 'top_left':
-            p = bbox.topLeft()
-        elif origin_position == 'top_right':
-            p = bbox.topRight()
-        else:
-            raise ValueError(f"Invalid origin_position: {origin_position}")
-
-        tx, ty = -p.x(), -p.y()
+        ox, oy = origin_shift(bbox, origin_corner)
+        tx, ty = ox, oy
 
         if not self.auto_shift:
             bbox = self.copy_bbox
@@ -531,19 +588,20 @@ class Job(Model):
         ty += py
 
         model = QTransform.fromTranslate(tx, ty).map(model)
+        if not weed_model.isEmpty():
+            weed_model = QTransform.fromTranslate(tx, ty).map(weed_model)
 
         bbox = model.boundingRect()
-        log.debug(f"Bbox after origin shift and padding: {bbox}")
+        log.debug("Bbox after origin shift and padding: %s" % bbox)
 
-        # Reorder subpaths to start with the one closest to (0,0)
         subpaths = split_painter_path(model)
-        log.debug(f"Number of subpaths: {len(subpaths)}")
+        log.debug("Number of subpaths: %s" % len(subpaths))
 
         def dist_to_origin(sp):
             if sp.elementCount() == 0:
                 return float('inf')
             start = sp.elementAt(0)
-            return (start.x**2 + start.y**2)**0.5
+            return (start.x ** 2 + start.y ** 2) ** 0.5
 
         subpaths.sort(key=dist_to_origin)
 
@@ -553,24 +611,66 @@ class Job(Model):
 
         log.debug("Reordered subpaths to start closest to origin")
 
-        # Feed offset
-        if self.feed_to_end:
-            if feed_axis == 'x':
-                if 'left' in origin_position:
-                    offset = bbox.right() + self.feed_after
-                else:
-                    offset = bbox.left() - self.feed_after
-                end_point = QPointF(offset, 0)
-            else:
-                if 'bottom' in origin_position:
-                    offset = bbox.top() - self.feed_after
-                else:
-                    offset = bbox.bottom() + self.feed_after
-                end_point = QPointF(0, offset)
-            model.moveTo(end_point)
-            log.debug(f"Added feed_to_end move to {end_point}")
+        segments = [PathSegment(kind='cut', path=model)]
+        if not weed_model.isEmpty():
+            segments.append(PathSegment(
+                kind='weed', path=weed_model,
+                meta={'mode': self.weed_mode}))
+            log.debug("Added weed segment mode=%s" % self.weed_mode)
 
-        log.debug(f"Final model bbox: {model.boundingRect()}")
+        cut_bounds = model.boundingRect()
+        if not weed_model.isEmpty():
+            cut_bounds = cut_bounds.united(weed_model.boundingRect())
+
+        # Epilogue in machine coords only (never scaled/mirrored with design)
+        if epilogue == 'feed':
+            end_point = feed_end_point(
+                cut_bounds, feed_axis, feed_sense, self.feed_after)
+            epi = QPainterPath()
+            epi.moveTo(end_point)
+            segments.append(PathSegment(
+                kind='epilogue', path=epi,
+                meta={'mode': 'feed', 'end': end_point}))
+            log.debug("Added feed epilogue move to %s" % end_point)
+        elif epilogue == 'return':
+            end_point = QPointF(0, 0)
+            epi = QPainterPath()
+            epi.moveTo(end_point)
+            segments.append(PathSegment(
+                kind='epilogue', path=epi,
+                meta={'mode': 'return', 'end': end_point}))
+            log.debug("Added return-to-origin epilogue")
+
+        plan = ToolpathPlan(
+            segments=segments,
+            origin=QPointF(0, 0),
+            feed_vector=feed_vector(feed_axis, feed_sense),
+            bounds=cut_bounds,
+        )
+        self.plan = plan
+        return plan
+
+    @log_errors
+    def create(self,
+               swap_xy=None,
+               scale=None,
+               origin_position=None,
+               origin_corner=None,
+               feed_axis=None,
+               feed_sense=None):
+        """Create a concatenated path model (compat for existing callers)."""
+        plan = self.build_plan(
+            swap_xy=swap_xy,
+            scale=scale,
+            origin_position=origin_position,
+            origin_corner=origin_corner,
+            feed_axis=feed_axis,
+            feed_sense=feed_sense,
+        )
+        if plan is None:
+            return
+        model = plan.to_device_stream()
+        log.debug("Final model bbox: %s" % model.boundingRect())
         return model
 
     def _check_bounds(self, plot, area):
@@ -587,8 +687,7 @@ class Job(Model):
         other_axis = axis + 1 % 2
         p = [0, 0]
 
-        bbox = path.boundingRect()
-        d = (bbox.width(), bbox.height())
+        d = self._extent_with_copy_weed(path)
         pad = self.copy_spacing
         stack_size = self._compute_stack_sizes(path)
 
@@ -602,6 +701,16 @@ class Job(Model):
 
             p[other_axis] += d[other_axis] + pad[other_axis]
 
+    def _extent_with_copy_weed(self, path):
+        """Width/height used for copy layout (includes copy weed pad)."""
+        bbox = path.boundingRect()
+        w, h = bbox.width(), bbox.height()
+        if self.copy_weedline:
+            pad = self.copy_weedline_padding
+            w += pad[Padding.LEFT] + pad[Padding.RIGHT]
+            h += pad[Padding.TOP] + pad[Padding.BOTTOM]
+        return (w, h)
+
     def _compute_stack_sizes(self, path):
         # Usable area
         material = self.material
@@ -611,9 +720,8 @@ class Job(Model):
         a[1] -= material.padding[Padding.TOP] + material.padding[
             Padding.BOTTOM]
 
-        # Clone includes weedline but not spacing
-        bbox = path.boundingRect()
-        size = [bbox.width(), bbox.height()]
+        # Clone includes weedline pad but not spacing
+        size = list(self._extent_with_copy_weed(path))
 
         stack_size = [0, 0]
         p = [0, 0]
@@ -626,22 +734,18 @@ class Job(Model):
         self.stack_size = stack_size
         return stack_size
 
+    def _weed_path_for(self, keep_path, padding):
+        """Weed geometry for keep_path using job weed_mode / spacing."""
+        return weed_strategies.generate_weeds(
+            keep_path,
+            mode=self.weed_mode,
+            padding=padding,
+            spacing=self.weed_grid_spacing,
+        )
+
     def _add_weedline(self, path, padding):
-        """ Adds a weedline to the path
-        by creating a box around the path with the given padding
-
-        """
-        bbox = path.boundingRect()
-        w, h = bbox.width(), bbox.height()
-
-        tl = bbox.topLeft()
-        x = tl.x() - padding[Padding.LEFT]
-        y = tl.y() - padding[Padding.TOP]
-
-        w += padding[Padding.LEFT] + padding[Padding.RIGHT]
-        h += padding[Padding.TOP] + padding[Padding.BOTTOM]
-
-        path.addRect(x, y, w, h)
+        """Legacy: add frame weed geometry onto *path* (mutates)."""
+        path.addPath(weed_strategies.frame_weeds(path, padding))
         return path
 
     @property
