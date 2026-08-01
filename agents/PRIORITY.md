@@ -1,13 +1,13 @@
 # Priority queue (inkcut_luke)
 
 **Updated:** 2026-08-01  
-**Branch:** `refactor1` (plan work; merge to master when gates pass)
+**Branch:** `refactor1` (merge to master when gates pass)
 
 ## Active agent work
 
 | Pri | Item | Status | Notes |
 | --- | --- | --- | --- |
-| P1 | Typed travel segments | TF-A done → TF-B | `agents/tasks/cutter-path-and-coords_typed-travel.md` on `refactor1` |
+| — | *(none)* | — | Typed travel residual shipped |
 
 ## Human (does not block agent queue unless hard)
 

@@ -350,7 +350,7 @@ Salvage carefully from `inkcut_ai_fail/inkcut/preview/indicators/` (origin.py, f
 - Optional preview legend UI
 - Optional tag/archive of `inkcut_ai_fail` ref2
 - Upstream contribution packaging
-- Typed travel segments still thin (pen-up often inside cut path MoveTos)
+- ~~Typed travel segments still thin~~ **done** (`typed-travel` residual task)
 - Region weeds: nesting + fan/grid, not CDT / global min cuts
 
 ---
@@ -379,6 +379,8 @@ Salvage carefully from `inkcut_ai_fail/inkcut/preview/indicators/` (origin.py, f
 
 **Key APIs:** `Device.protocol_transform`, `Device._apply_protocol_to_plan`, `Device._process_plan`
 
-**Residuals:** hardware Summa verify; upstream PR; optional legend; thin typed travel
+**Residuals:** hardware Summa verify; upstream PR; optional legend; region weeds not CDT
 
-**Next:** none for this plan
+**Typed travel residual (2026-08-01):** first-class `travel` segments + remove dist_to_origin re-sort; 102 tests; B AGREE.
+
+**Next:** none agent-required; soft human blocker B-summa-d760-measure
