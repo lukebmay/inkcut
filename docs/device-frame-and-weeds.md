@@ -42,8 +42,11 @@ Precut and live previews share toggles (Preview settings):
 - Cuts, travel, weeds
 - Origin crosshair
 - Feed / unroll arrow
+- **Legend** — corner key of named pens on both plots (`show_legend`, default on)
 
 Colors: cut (solid), travel (pen-up), weed (distinct), epilogue (dashed travel-style).
+Material, usable area (padding), and device area borders also appear in the legend
+when present.
 
 ## Weed modes
 

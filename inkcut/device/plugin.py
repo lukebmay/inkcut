@@ -17,6 +17,7 @@ from atom.api import (Typed, List, Instance, ForwardInstance, ContainerList,
 from contextlib import contextmanager
 from datetime import datetime
 from enaml.qt import QtCore, QtGui
+from enaml.qt.QtWidgets import QApplication
 from enaml.application import timed_call
 from inkcut.core.api import Model, Plugin, AreaBase
 from inkcut.core.utils import parse_unit, from_unit, to_unit, async_sleep, log, log_errors
@@ -1460,7 +1461,8 @@ class DevicePlugin(Plugin):
             view_items.append(
                 dict(path=transformed_mat,
                      pen=plot.pen_media,
-                     skip_autorange=False))
+                     skip_autorange=False,
+                     name=QApplication.translate("preview", "Material")))
         elif device and device.area:
             size = device.area.size
 

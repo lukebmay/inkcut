@@ -28,8 +28,51 @@ from pyqtgraph.graphicsItems.GraphicsObject import GraphicsObject
 
 
 class PainterPathPlotItem(PlotCurveItem):
+    """Plot item backed by a QPainterPath (not x/y arrays).
 
-    def updateData(self, path, **kargs):
+    Construction: ``PainterPathPlotItem(path, pen=..., name=..., skip_autorange=...)``.
+    Path is not passed to PlotCurveItem.setData (arrays only).
+    """
+
+    def __init__(self, path=None, **kargs):
+        # Parent init with no data args (never QPainterPath into setData).
+        pen = kargs.pop('pen', None)
+        name = kargs.pop('name', None)
+        skip = kargs.pop('skip_autorange', None)
+        shadow = kargs.pop('shadowPen', None)
+        self.path = QtGui.QPainterPath()
+        PlotCurveItem.__init__(self)
+        if pen is not None:
+            self.setPen(pen)
+        if shadow is not None:
+            self.setShadowPen(shadow)
+        if name is not None:
+            self.opts['name'] = name
+        if path is not None:
+            opts = dict(kargs)
+            if pen is not None:
+                opts['pen'] = pen
+            if name is not None:
+                opts['name'] = name
+            if skip is not None:
+                opts['skip_autorange'] = skip
+            if shadow is not None:
+                opts['shadowPen'] = shadow
+            self.updateData(path, **opts)
+
+    def updateData(self, *args, **kargs):
+        """Load a QPainterPath, or accept empty parent setData() during init."""
+        if not args:
+            # PlotCurveItem.__init__ → setData() → updateData() with no geometry
+            if 'name' in kargs:
+                self.opts['name'] = kargs['name']
+            if 'pen' in kargs:
+                self.setPen(kargs['pen'])
+            return
+        path = args[0]
+        if not isinstance(path, QtGui.QPainterPath):
+            return
+
         # Invert for display
         self.path = QtGui.QTransform.fromScale(1, -1).map(path)
 
@@ -80,9 +123,13 @@ class PainterPathPlotItem(PlotCurveItem):
         self.sigPlotChanged.emit(self)
 
     def boundingRect(self):
+        if not hasattr(self, 'path') or self.path is None:
+            return QtGui.QPainterPath().boundingRect()
         return self.path.boundingRect()
 
     def getPath(self):
+        if not hasattr(self, 'path') or self.path is None:
+            return QtGui.QPainterPath()
         return self.path
 
 
@@ -117,10 +164,13 @@ class PlotView(Control):
     grid = d_(Tuple(item=Bool(), default=(False, False)))
     grid_alpha = d_(FloatRange(low=0.0, high=1.0, value=0.5))
 
+    #: pyqtgraph corner legend for named plot items
+    show_legend = d_(Bool(True))
+
     multi_axis = d_(Bool(True))
 
     @observe('data', 'title', 'labels', 'multi_axis', 'antialiasing',
-             'axis_scales', 'grid', 'grid_alpha')
+             'axis_scales', 'grid', 'grid_alpha', 'show_legend')
     def _update_proxy(self, change):
         """ An observer which sends state change to the proxy.
         """
@@ -141,6 +191,7 @@ class QtPlotView(QtControl, ProxyPlotView):
         super(QtPlotView, self).init_widget()
         d = self.declaration
         #self.widget.setSizePolicy(QSizePolicy.Expanding,QSizePolicy.Expanding)
+        self.set_show_legend(d.show_legend)
         self.set_data(d.data)
         self.set_antialiasing(d.antialiasing)
         self.set_aspect_locked(d.aspect_locked)
@@ -179,8 +230,24 @@ class QtPlotView(QtControl, ProxyPlotView):
         d = self.declaration
         self.widget.showGrid(d.grid[0], d.grid[1], alpha)
 
+    def set_show_legend(self, show):
+        """Create or hide the plot legend. Named items auto-register on add."""
+        plot_item = self.widget.plotItem
+        if show:
+            if plot_item.legend is None:
+                plot_item.addLegend(offset=(10, 10))
+            else:
+                plot_item.legend.show()
+        elif plot_item.legend is not None:
+            plot_item.legend.hide()
+
     def set_data(self, data):
+        legend = getattr(self.widget.plotItem, 'legend', None)
+        if legend is not None:
+            legend.clear()
         self.widget.clear()
+        # clear() keeps the LegendItem; restore visibility from declaration
+        self.set_show_legend(self.declaration.show_legend)
         if not data:
             return
 
@@ -191,7 +258,6 @@ class QtPlotView(QtControl, ProxyPlotView):
             self._set_numeric_data(data)
 
     def _set_graphic_items(self, items):
-        self.widget.clear()
         for item in items:
             self.widget.addItem(item)
 
@@ -238,7 +304,10 @@ def plot_view_factory():
     return QtPlotView
 
 
-# Inject the factory
-QtApplication.instance().resolver.factories.update({
-    'PlotView': plot_view_factory
-})
+def _register_plot_view_factory():
+    app = QtApplication.instance()
+    if app is not None and getattr(app, 'resolver', None) is not None:
+        app.resolver.factories.update({'PlotView': plot_view_factory})
+
+
+_register_plot_view_factory()

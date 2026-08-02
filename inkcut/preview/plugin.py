@@ -12,12 +12,17 @@ Created on Jul 12, 2015
 import pyqtgraph as pg
 from atom.api import List, Instance, Enum, Bool, Range, observe
 from enaml.qt import QtCore, QtGui
+from enaml.qt.QtWidgets import QApplication
 from inkcut.core.api import Plugin, Model, unit_conversions, log
 from .plot_view import PainterPathPlotItem
 from . import indicators
 
 
 QPen = QtGui.QPen
+
+
+def _tr(text):
+    return QApplication.translate("preview", text)
 
 
 class PreviewModel(Model):
@@ -115,6 +120,8 @@ class PreviewPlugin(Plugin):
     show_weeds = Bool(True).tag(config=True)
     show_origin = Bool(True).tag(config=True)
     show_feed = Bool(True).tag(config=True)
+    #: Corner legend of named pens on precut + live plots
+    show_legend = Bool(True).tag(config=True)
 
     def _default_transform(self):
         """ Qt displays top to bottom so this can be used to flip it.
@@ -161,6 +168,7 @@ class PreviewPlugin(Plugin):
         """Build cut/travel/weed/epilogue + origin/feed items from toggles.
 
         map_path: optional callable(path) -> path applied to every layer path.
+        Each item may include ``name`` for the plot legend.
         """
         map_path = map_path or (lambda p: p)
         layers = indicators.plan_layer_paths(
@@ -168,14 +176,29 @@ class PreviewPlugin(Plugin):
         items = []
 
         if self.show_travel and not layers['travel'].isEmpty():
-            items.append(dict(path=map_path(layers['travel']), pen=plot.pen_up))
+            items.append(dict(
+                path=map_path(layers['travel']),
+                pen=plot.pen_up,
+                name=_tr("Travel"),
+            ))
         if self.show_cuts and not layers['cut'].isEmpty():
-            items.append(dict(path=map_path(layers['cut']), pen=plot.pen_down))
+            items.append(dict(
+                path=map_path(layers['cut']),
+                pen=plot.pen_down,
+                name=_tr("Cuts"),
+            ))
         if self.show_weeds and not layers['weed'].isEmpty():
-            items.append(dict(path=map_path(layers['weed']), pen=plot.pen_weed))
+            items.append(dict(
+                path=map_path(layers['weed']),
+                pen=plot.pen_weed,
+                name=_tr("Weed lines"),
+            ))
         if self.show_travel and not layers['epilogue'].isEmpty():
             items.append(dict(
-                path=map_path(layers['epilogue']), pen=plot.pen_epilogue))
+                path=map_path(layers['epilogue']),
+                pen=plot.pen_epilogue,
+                name=_tr("Epilogue"),
+            ))
 
         arm = indicators.indicator_length(size)
         if origin is None and plan is not None:
@@ -189,6 +212,7 @@ class PreviewPlugin(Plugin):
                 path=map_path(o_path),
                 pen=plot.pen_origin,
                 skip_autorange=True,
+                name=_tr("Origin"),
             ))
         if self.show_feed and feed_direction is not None:
             f_path = indicators.feed_arrow_path(
@@ -197,6 +221,7 @@ class PreviewPlugin(Plugin):
                 path=map_path(f_path),
                 pen=plot.pen_feed,
                 skip_autorange=True,
+                name=_tr("Feed direction"),
             ))
         return items
 

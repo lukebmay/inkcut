@@ -13,6 +13,7 @@ import os
 import sys
 import enaml
 from atom.api import Instance, Enum, List, Str, Int, Float, observe
+from enaml.qt.QtWidgets import QApplication
 from inkcut.core.api import Plugin, unit_conversions, log
 from inkcut.core.utils import log_errors
 
@@ -206,6 +207,7 @@ class JobPlugin(Plugin):
                     path=transform(t.map(device.area.path)),
                     pen=plot.pen_device,
                     skip_autorange=True,
+                    name=QApplication.translate("preview", "Device area"),
                 )  # (False, [area.size[0], 0]))
             )
 
@@ -232,11 +234,13 @@ class JobPlugin(Plugin):
                     path=transform(t.map(job.material.path)),
                     pen=plot.pen_media,
                     skip_autorange=([0, job.size[0]], [0, job.size[1]]),
+                    name=QApplication.translate("preview", "Material"),
                 ),
                 dict(
                     path=transform(t.map(job.material.padding_path)),
                     pen=plot.pen_media_padding,
                     skip_autorange=True,
+                    name=QApplication.translate("preview", "Usable area"),
                 ),
             ])
 

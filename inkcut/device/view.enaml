@@ -322,6 +322,7 @@ enamldef DeviceProgressDockItem(DockItem):
             data := preview.plot
             grid << (preview_plugin.show_grid_x, preview_plugin.show_grid_y)
             grid_alpha << preview_plugin.grid_alpha/100.0
+            show_legend << preview_plugin.show_legend
             axis_scales << {
                 'left': to_unit(1, job_plugin.units),
                 'bottom': to_unit(1, job_plugin.units)

@@ -27,7 +27,8 @@ if qtool_tip == 'tool_tip':
     qtool_tip = textwrap.dedent("""
                 The red dashed border is the device's x-y plane.
                 The solid black border is the material. The dashed black border is
-                the available area for use. The blue lines is the movement path.
+                the available area for use. Path layers (cuts, travel, weeds,
+                origin, feed) use the colors in the plot legend (Preview settings).
                 """).strip()
 
 
@@ -77,6 +78,7 @@ enamldef PreviewDockItem(DockItem):
             data := preview.plot
             grid << (plugin.show_grid_x, plugin.show_grid_y)
             grid_alpha << plugin.grid_alpha/100.0
+            show_legend << plugin.show_legend
             axis_scales << {
                 'left' : to_unit(1, job_plugin.units),
                 'bottom' : to_unit(1, job_plugin.units)

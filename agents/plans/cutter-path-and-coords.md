@@ -263,7 +263,7 @@ Weed segments are `kind='weed'` cuts: they go to the device as blade-down, previ
 - [x] Distinct pens: cut / travel / weed / epilogue (epilogue can share travel color with different dash).
 - [x] Settings checkboxes; persist in preview plugin config.
 - [x] Order algorithm changes refresh travel layer clearly.
-- [ ] Optional: legend in preview.
+- [x] Optional: legend in preview (`show_legend`; residual task).
 
 Salvage carefully from `inkcut_ai_fail/inkcut/preview/indicators/` (origin.py, feed.py); rewrite if coupled to wrong transform assumptions.
 
@@ -347,7 +347,7 @@ Salvage carefully from `inkcut_ai_fail/inkcut/preview/indicators/` (origin.py, f
 
 - Hardware verification of Summa D760 origin/feed/protocol
 - Named D760 driver preset after measurement
-- Optional preview legend UI
+- ~~Optional preview legend UI~~ **done** (`preview-legend` residual task)
 - Optional tag/archive of `inkcut_ai_fail` ref2
 - Upstream contribution packaging
 - ~~Typed travel segments still thin~~ **done** (`typed-travel` residual task)
@@ -379,8 +379,10 @@ Salvage carefully from `inkcut_ai_fail/inkcut/preview/indicators/` (origin.py, f
 
 **Key APIs:** `Device.protocol_transform`, `Device._apply_protocol_to_plan`, `Device._process_plan`
 
-**Residuals:** hardware Summa verify; upstream PR; optional legend; region weeds not CDT
+**Residuals:** hardware Summa verify; upstream PR; region weeds not CDT
 
 **Typed travel residual (2026-08-01):** first-class `travel` segments + remove dist_to_origin re-sort; 102 tests; B AGREE.
+
+**Preview legend residual (2026-08-01):** `show_legend` + named layer pens on precut/live; fixed `PainterPathPlotItem` path ctor; 105 tests.
 
 **Next:** none agent-required; soft human blocker B-summa-d760-measure

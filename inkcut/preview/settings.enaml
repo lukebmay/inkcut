@@ -41,7 +41,7 @@ enamldef PreviewSettingsPage(Container):
             text = QApplication.translate("settings", "Layers")
         Container:
             constraints = [
-                vbox(sc, st, sw, so, sf),
+                vbox(sc, st, sw, so, sf, sl),
             ]
             CheckBox: sc:
                 text = QApplication.translate("settings", "Cuts")
@@ -58,3 +58,6 @@ enamldef PreviewSettingsPage(Container):
             CheckBox: sf:
                 text = QApplication.translate("settings", "Feed direction")
                 checked := model.show_feed
+            CheckBox: sl:
+                text = QApplication.translate("settings", "Legend")
+                checked := model.show_legend

@@ -2,6 +2,7 @@
 
 | Date | Slug | Tags | Summary |
 | --- | --- | --- | --- |
+| 2026-08-01 | [cutter-path-preview-legend](entries/cutter-path-preview-legend.md) | inkcut, preview, legend | Corner legend for path layers; PainterPathPlotItem ctor fix |
 | 2026-08-01 | [cutter-path-typed-travel](entries/cutter-path-typed-travel.md) | inkcut, toolpath, travel | Typed travel segments; order preserved; pen-up device stream |
 | 2026-07-16 | [cutter-path-and-coords-plan](entries/cutter-path-and-coords-plan.md) | inkcut, toolpath, coords, weeds | Full plan closed (software): layers, frame, previews, weeds, protocol split |
 | 2026-07-16 | [cutter-path-phase5-polish](entries/cutter-path-phase5-polish.md) | inkcut, filters, protocol | Phase 5: filter epilogue skip + protocol after plan + docs |

@@ -20,7 +20,6 @@
 
 | Pri | Item | Kind | Notes |
 | --- | --- | --- | --- |
-| P2 | Optional preview legend UI | optional | Plan residual; skip unless asked |
 | P3 | Tag/archive `inkcut_ai_fail` ref2 | optional | Housekeeping only |
 
 ## Rules

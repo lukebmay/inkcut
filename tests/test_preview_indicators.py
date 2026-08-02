@@ -2,9 +2,17 @@
 """Preview indicator geometry and plan layer helpers."""
 from __future__ import division
 
+import os
+
 import pytest
 from enaml.qt.QtCore import QPointF
 from enaml.qt.QtGui import QPainterPath
+from enaml.qt.QtWidgets import QApplication
+
+# Offscreen Qt for PainterPathPlotItem / PreviewPlugin tests
+os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
+if QApplication.instance() is None:
+    QApplication([])
 
 from inkcut.device.frame import feed_vector
 from inkcut.job.toolpath import PathSegment, ToolpathPlan
@@ -191,3 +199,80 @@ def test_path_last_point():
     last = path_last_point(p)
     assert last.x() == pytest.approx(3.0)
     assert last.y() == pytest.approx(4.0)
+
+
+def test_painter_path_plot_item_accepts_path_and_name():
+    """Constructor must not pass QPainterPath into PlotCurveItem.setData."""
+    import pyqtgraph as pg
+    from inkcut.preview.plot_view import PainterPathPlotItem
+
+    path = QPainterPath()
+    path.moveTo(0, 0)
+    path.lineTo(10, 5)
+    item = PainterPathPlotItem(
+        path, pen=pg.mkPen((1, 2, 3)), name='Cuts', skip_autorange=True)
+    assert item.name() == 'Cuts'
+    assert not item.path.isEmpty()
+    # Display path is Y-flipped; geometry still non-empty
+    assert item.boundingRect().width() > 0 or item.boundingRect().height() > 0
+
+
+def test_layer_view_items_include_legend_names():
+    from inkcut.preview.plugin import PreviewModel, PreviewPlugin
+
+    cut = QPainterPath()
+    cut.moveTo(0, 0)
+    cut.lineTo(5, 0)
+    cut.moveTo(10, 0)
+    cut.lineTo(15, 0)
+    weed = QPainterPath()
+    weed.moveTo(-1, -1)
+    weed.lineTo(16, -1)
+    epi = QPainterPath()
+    epi.moveTo(0, 0)
+    plan = ToolpathPlan(
+        segments=[
+            PathSegment('cut', cut),
+            PathSegment('weed', weed),
+            PathSegment('epilogue', epi, meta={
+                'mode': 'return', 'end': QPointF(0, 0)}),
+        ],
+        origin=QPointF(0, 0),
+        feed_vector=QPointF(0, -1),
+    )
+    plugin = PreviewPlugin()
+    plot = PreviewModel()
+    items = plugin.layer_view_items(
+        plot, plan=plan, size=(100, 100))
+    names = [i.get('name') for i in items]
+    assert 'Travel' in names or any(n and 'Travel' in n for n in names)
+    assert 'Cuts' in names or any(n and 'Cuts' in n for n in names)
+    assert 'Weed lines' in names or any(n and 'Weed' in n for n in names)
+    assert 'Epilogue' in names or any(n and 'Epilogue' in n for n in names)
+    assert 'Origin' in names or any(n and 'Origin' in n for n in names)
+    assert 'Feed direction' in names or any(
+        n and 'Feed' in n for n in names)
+    # Pens present for named layers
+    by_name = {i['name']: i for i in items if i.get('name')}
+    assert 'pen' in by_name[list(by_name.keys())[0]]
+
+
+def test_layer_view_items_respect_toggles():
+    from inkcut.preview.plugin import PreviewModel, PreviewPlugin
+
+    cut = QPainterPath()
+    cut.moveTo(0, 0)
+    cut.lineTo(5, 0)
+    plan = ToolpathPlan(
+        segments=[PathSegment('cut', cut)],
+        origin=QPointF(0, 0),
+        feed_vector=QPointF(0, -1),
+    )
+    plugin = PreviewPlugin()
+    plugin.show_cuts = False
+    plugin.show_travel = False
+    plugin.show_origin = False
+    plugin.show_feed = False
+    items = plugin.layer_view_items(
+        PreviewModel(), plan=plan, size=(50, 50))
+    assert items == []

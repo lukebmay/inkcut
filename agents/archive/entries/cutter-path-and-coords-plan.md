@@ -30,7 +30,7 @@ Summa D760 and similar need trustworthy origin/unroll without faking origin via 
 
 - D760 not hardware-verified; no named driver preset yet.
 - Typed travel still thin (moveTos often inside cut paths).
-- Optional preview legend; upstream packaging later.
+- ~~Optional preview legend~~ done; upstream packaging later.
 
 ## Key paths
 
