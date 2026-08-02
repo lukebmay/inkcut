@@ -20,7 +20,7 @@
 
 | Pri | Item | Kind | Notes |
 | --- | --- | --- | --- |
-| P3 | Tag/archive `inkcut_ai_fail` ref2 | optional | Housekeeping only |
+| — | *(none)* | — | — |
 
 ## Rules
 
