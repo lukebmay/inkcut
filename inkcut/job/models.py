@@ -194,6 +194,18 @@ class Job(Model):
     weed_mode = Enum(*weed_strategies.WEED_MODES).tag(config=True)
     weed_grid_spacing = Float(weed_strategies.DEFAULT_GRID_SPACING).tag(
         config=True)
+    #: Auto peel: max waste span before sparse strip splits
+    weed_max_chunk = Float(weed_strategies.DEFAULT_MAX_CHUNK).tag(config=True)
+    #: Auto peel: cut waste necks thinner than this
+    weed_bridge_width = Float(weed_strategies.DEFAULT_BRIDGE_WIDTH).tag(
+        config=True)
+    #: Auto peel: keep edge clearance (weeds stay outside)
+    weed_clearance = Float(weed_strategies.DEFAULT_CLEARANCE).tag(config=True)
+    #: Auto peel: drop micro-cuts shorter than this
+    weed_min_cut = Float(weed_strategies.DEFAULT_MIN_CUT).tag(config=True)
+    #: Auto peel: corner turn (degrees) that triggers outward relief
+    weed_delicate_angle = Float(
+        weed_strategies.DEFAULT_DELICATE_ANGLE_DEG).tag(config=True)
 
     order = Enum(*sorted(ordering.REGISTRY.keys())).tag(config=True)
 
@@ -393,7 +405,9 @@ class Job(Model):
              'align_center', 'rotation', 'auto_rotate', 'copies', 'order',
              'copy_spacing', 'copy_weedline', 'copy_weedline_padding',
              'plot_weedline', 'plot_weedline_padding', 'weed_mode',
-             'weed_grid_spacing', 'feed_to_end',
+             'weed_grid_spacing', 'weed_max_chunk', 'weed_bridge_width',
+             'weed_clearance', 'weed_min_cut', 'weed_delicate_angle',
+             'feed_to_end',
              'feed_after', 'material', 'material.size', 'material.padding',
              'auto_copies', 'auto_shift')
     def update_document(self, change=None):
@@ -758,6 +772,11 @@ class Job(Model):
             mode=self.weed_mode,
             padding=padding,
             spacing=self.weed_grid_spacing,
+            max_chunk=self.weed_max_chunk,
+            bridge_width=self.weed_bridge_width,
+            clearance=self.weed_clearance,
+            min_cut=self.weed_min_cut,
+            delicate_angle_deg=self.weed_delicate_angle,
         )
 
     def _add_weedline(self, path, padding):

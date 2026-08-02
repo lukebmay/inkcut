@@ -43,7 +43,9 @@ def generate_weeds(keep_path,
                    spacing=DEFAULT_GRID_SPACING,
                    max_chunk=None,
                    bridge_width=None,
-                   clearance=None):
+                   clearance=None,
+                   min_cut=None,
+                   delicate_angle_deg=None):
     """Build a weed QPainterPath for keep geometry.
 
     Parameters
@@ -56,7 +58,7 @@ def generate_weeds(keep_path,
         Left, top, right, bottom pad around keep bbox.
     spacing : float
         Grid / region / auto strip spacing (device units).
-    max_chunk, bridge_width, clearance : float, optional
+    max_chunk, bridge_width, clearance, min_cut, delicate_angle_deg
         Auto-mode physical knobs (ignored by other modes).
     """
     if keep_path is None or keep_path.isEmpty():
@@ -78,6 +80,8 @@ def generate_weeds(keep_path,
         max_chunk=max_chunk,
         bridge_width=bridge_width,
         clearance=clearance,
+        min_cut=min_cut,
+        delicate_angle_deg=delicate_angle_deg,
     )
 
 

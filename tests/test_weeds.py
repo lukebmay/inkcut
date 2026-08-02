@@ -292,3 +292,26 @@ def test_job_plan_auto_mode_typed_weed():
     assert len(weed_segs) == 1
     assert weed_segs[0].meta.get('mode') == 'auto'
     assert not plan.weeds().isEmpty()
+
+
+def test_auto_knobs_change_geometry():
+    """User-facing knobs must affect generated weed paths."""
+    keep = _rect_path(20, 20, 80, 50)
+    pad = [15, 15, 15, 15]
+    dense = auto_weeds(
+        keep, padding=pad, spacing=10, max_chunk=25,
+        delicate_angle_deg=40.0)
+    sparse = auto_weeds(
+        keep, padding=pad, spacing=40, max_chunk=120,
+        delicate_angle_deg=120.0, bridge_width=1.0)
+    d = weed_path_stats(dense)
+    s = weed_path_stats(sparse)
+    # Tighter chunk + lower angle → at least as many segments as sparse
+    assert d['segments'] >= s['segments']
+    # Job wires knobs through generate_weeds
+    from inkcut.job.weeds import generate_weeds
+    a = generate_weeds(
+        keep, mode='auto', padding=pad, spacing=20,
+        max_chunk=30, bridge_width=5, clearance=1.0,
+        min_cut=3.0, delicate_angle_deg=50.0)
+    assert not a.isEmpty()

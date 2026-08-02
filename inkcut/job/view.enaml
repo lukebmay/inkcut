@@ -316,7 +316,72 @@ enamldef WeedlinesDockItem(DockItem):
                     single_step = 1.0
                     tool_tip = QApplication.translate(
                         "job",
-                        "Grid pitch, or auto peel max strip pitch / chunk scale")
+                        "Grid pitch; auto peel preferred strip pitch")
+                Label:
+                    text = QApplication.translate("job", "Max peel chunk")
+                DoubleSpinBox:
+                    enabled << (job.weed_mode == 'auto')
+                    value << to_unit(job.weed_max_chunk, plugin.units)
+                    value :: job.weed_max_chunk = from_unit(change['value'], plugin.units)
+                    suffix << " "+plugin.units
+                    maximum = 99999.9
+                    minimum = 1.0
+                    single_step = 5.0
+                    tool_tip = QApplication.translate(
+                        "job",
+                        "Auto peel: split waste when longer than this (long strips)")
+                Label:
+                    text = QApplication.translate("job", "Bridge width")
+                DoubleSpinBox:
+                    enabled << (job.weed_mode == 'auto')
+                    value << to_unit(job.weed_bridge_width, plugin.units)
+                    value :: job.weed_bridge_width = from_unit(change['value'], plugin.units)
+                    suffix << " "+plugin.units
+                    maximum = 9999.9
+                    minimum = 0.1
+                    single_step = 0.5
+                    tool_tip = QApplication.translate(
+                        "job",
+                        "Auto peel: cut sticky necks thinner than this between shapes")
+                Label:
+                    text = QApplication.translate("job", "Keep clearance")
+                DoubleSpinBox:
+                    enabled << (job.weed_mode == 'auto')
+                    value << to_unit(job.weed_clearance, plugin.units)
+                    value :: job.weed_clearance = from_unit(change['value'], plugin.units)
+                    suffix << " "+plugin.units
+                    maximum = 50.0
+                    minimum = 0.0
+                    single_step = 0.1
+                    tool_tip = QApplication.translate(
+                        "job",
+                        "Auto peel: keep weed cuts this far outside keep edges")
+                Label:
+                    text = QApplication.translate("job", "Min cut length")
+                DoubleSpinBox:
+                    enabled << (job.weed_mode == 'auto')
+                    value << to_unit(job.weed_min_cut, plugin.units)
+                    value :: job.weed_min_cut = from_unit(change['value'], plugin.units)
+                    suffix << " "+plugin.units
+                    maximum = 100.0
+                    minimum = 0.1
+                    single_step = 0.5
+                    tool_tip = QApplication.translate(
+                        "job",
+                        "Auto peel: drop weed segments shorter than this")
+                Label:
+                    text = QApplication.translate("job", "Delicate corner °")
+                DoubleSpinBox:
+                    enabled << (job.weed_mode == 'auto')
+                    value := job.weed_delicate_angle
+                    maximum = 170.0
+                    minimum = 15.0
+                    single_step = 5.0
+                    decimals = 0
+                    tool_tip = QApplication.translate(
+                        "job",
+                        "Auto peel: outward relief when corner turn ≥ this "
+                        "(lower = more reliefs; ~90 for right angles)")
         Container:
             padding = 0
 
