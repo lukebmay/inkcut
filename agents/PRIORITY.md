@@ -1,13 +1,13 @@
 # Priority queue (inkcut_luke)
 
-**Updated:** 2026-08-01  
+**Updated:** 2026-08-02  
 **Branch:** `refactor1` (merge to master when gates pass)
 
 ## Active agent work
 
 | Pri | Item | Status | Notes |
 | --- | --- | --- | --- |
-| — | *(none)* | — | Typed travel residual shipped |
+| — | *(none)* | — | Waiting: implement `auto` weed peel when user says begin |
 
 ## Human (does not block agent queue unless hard)
 
@@ -20,7 +20,7 @@
 
 | Pri | Item | Kind | Notes |
 | --- | --- | --- | --- |
-| — | *(none)* | — | — |
+| P1 | Auto weed peel (`auto` mode) | ready | Plan: `agents/plans/auto-weed-peel.md` — adhesive, min cuts, smooth, delicate outward relief |
 
 ## Rules
 

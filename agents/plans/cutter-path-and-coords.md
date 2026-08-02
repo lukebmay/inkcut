@@ -348,10 +348,10 @@ Salvage carefully from `inkcut_ai_fail/inkcut/preview/indicators/` (origin.py, f
 - Hardware verification of Summa D760 origin/feed/protocol
 - Named D760 driver preset after measurement
 - ~~Optional preview legend UI~~ **done** (`preview-legend` residual task)
-- Optional tag/archive of `inkcut_ai_fail` ref2
 - Upstream contribution packaging
 - ~~Typed travel segments still thin~~ **done** (`typed-travel` residual task)
 - Region weeds: nesting + fan/grid, not CDT / global min cuts
+- **Follow-on plan:** peel-quality auto weeds → `agents/plans/auto-weed-peel.md` (not more region demos)
 
 ---
 
