@@ -190,7 +190,7 @@ class Job(Model):
                                           default=[10, 10, 10,
                                                    10]).tag(config=True)
 
-    #: Weed strategy: frame (box), grid (clipped), region (nesting + fan)
+    #: Weed strategy: frame | grid | region | auto (adhesive peel)
     weed_mode = Enum(*weed_strategies.WEED_MODES).tag(config=True)
     weed_grid_spacing = Float(weed_strategies.DEFAULT_GRID_SPACING).tag(
         config=True)

@@ -9,8 +9,8 @@ from inkcut.core.svg import QtSvgDoc
 from inkcut.core.utils import split_painter_path
 from inkcut.job.models import Job
 from inkcut.job.weeds import (
-    closed_fill_union, frame_weeds, generate_weeds, grid_weeds, list_closed_subpaths,
-    region_weeds,
+    auto_weeds, closed_fill_union, frame_weeds, generate_weeds, grid_weeds,
+    list_closed_subpaths, region_weeds, weed_path_stats,
 )
 
 
@@ -83,9 +83,11 @@ def test_generate_weeds_modes():
     f = generate_weeds(keep, mode='frame', padding=[2, 2, 2, 2])
     g = generate_weeds(keep, mode='grid', padding=[2, 2, 2, 2], spacing=10)
     r = generate_weeds(keep, mode='region', padding=[2, 2, 2, 2], spacing=10)
+    a = generate_weeds(keep, mode='auto', padding=[2, 2, 2, 2], spacing=20)
     assert not f.isEmpty()
     assert not g.isEmpty()
     assert not r.isEmpty()
+    assert not a.isEmpty()
 
 
 def test_grid_does_not_slice_keep_island():
@@ -186,3 +188,107 @@ def test_legacy_add_weedline_uses_frame():
     job._add_weedline(path, [1, 1, 1, 1])
     # Original path + frame rect
     assert path.boundingRect().width() >= 12
+
+
+def _sharp_diamond():
+    """Diamond with acute corners (delicate tips)."""
+    p = QPainterPath()
+    p.moveTo(50, 10)
+    p.lineTo(70, 50)
+    p.lineTo(50, 90)
+    p.lineTo(30, 50)
+    p.closeSubpath()
+    return p
+
+
+def test_auto_fewer_segments_than_dense_grid():
+    keep = _rect_path(20, 20, 60, 40)
+    pad = [15, 15, 15, 15]
+    grid = grid_weeds(keep, padding=pad, spacing=8)
+    auto = auto_weeds(keep, padding=pad, spacing=25, max_chunk=50)
+    g = weed_path_stats(grid)
+    a = weed_path_stats(auto)
+    assert a['segments'] < g['segments'], (
+        "auto should use fewer cuts than dense grid (%s vs %s)" % (
+            a['segments'], g['segments']))
+
+
+def test_auto_does_not_slice_keep():
+    # Nested: outer is boundary, island is solid keep (annulus is waste).
+    keep = _nested_circle_island()
+    closed = list_closed_subpaths(keep)
+    island_fill = QPainterPath(closed[1])
+    weed = auto_weeds(keep, padding=[8, 8, 8, 8], spacing=20, max_chunk=40)
+    assert not weed.isEmpty()
+    frac = _fraction_inside(weed, island_fill, step=1.0)
+    assert frac < 0.08, "auto weed sliced island keep (frac=%s)" % frac
+
+    # Simple solid rect: weeds stay outside
+    solid = _rect_path(20, 20, 40, 30)
+    solid_fill = closed_fill_union(solid)
+    weed2 = auto_weeds(solid, padding=[10, 10, 10, 10], spacing=20, max_chunk=40)
+    frac2 = _fraction_inside(weed2, solid_fill, step=1.0)
+    assert frac2 < 0.08, "auto weed sliced solid keep (frac=%s)" % frac2
+
+
+def test_auto_pocket_release_enters_nested_waste():
+    keep = _nested_circle_island()
+    closed = list_closed_subpaths(keep)
+    outer, island = closed[0], closed[1]
+    waste = QPainterPath(outer).subtracted(island)
+    weed = auto_weeds(keep, padding=[5, 5, 5, 5], spacing=20, max_chunk=40)
+    pts = _sample_points_on_path(weed, step=1.5)
+    in_waste = sum(1 for p in pts if waste.contains(p))
+    assert in_waste > 0, "auto never released nested pocket waste"
+
+
+def test_auto_delicate_emits_outward_from_sharp_corners():
+    keep = _sharp_diamond()
+    pad = [20, 20, 20, 20]
+    weed = auto_weeds(
+        keep, padding=pad, spacing=30, max_chunk=50,
+        delicate_angle_deg=40.0)
+    assert not weed.isEmpty()
+    # Top tip at (50, 10): expect some weed sample outward (above or away)
+    tip = QPointF(50, 10)
+    pts = _sample_points_on_path(weed, step=1.0)
+    near_outward = [
+        p for p in pts
+        if abs(p.x() - 50) < 8 and p.y() < 10 - 1.0
+    ]
+    # Also accept any relief starting near tip going outside keep
+    keep_fill = closed_fill_union(keep)
+    near_tip_outside = [
+        p for p in pts
+        if math_hypot(p, tip) < 25 and not keep_fill.contains(p)
+    ]
+    assert near_outward or near_tip_outside, (
+        "auto produced no outward relief near diamond tip")
+
+
+def math_hypot(p, q):
+    return ((p.x() - q.x()) ** 2 + (p.y() - q.y()) ** 2) ** 0.5
+
+
+def test_job_plan_auto_mode_typed_weed():
+    svg = '''<?xml version="1.0"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="100" height="80">
+  <rect x="25" y="20" width="50" height="40" fill="none" stroke="black"/>
+</svg>'''
+    doc = QtSvgDoc(svg)
+    job = Job()
+    job.doc = doc
+    job.path = doc
+    job.optimized_path = doc
+    job.plot_weedline = True
+    job.weed_mode = 'auto'
+    job.weed_grid_spacing = 20
+    job.plot_weedline_padding = [12, 12, 12, 12]
+
+    plan = job.build_plan(
+        swap_xy=False, scale=[1, 1],
+        origin_position='bottom_left', feed_axis='y', epilogue='none')
+    weed_segs = [s for s in plan.segments if s.kind == 'weed']
+    assert len(weed_segs) == 1
+    assert weed_segs[0].meta.get('mode') == 'auto'
+    assert not plan.weeds().isEmpty()

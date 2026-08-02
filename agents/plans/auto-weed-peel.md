@@ -2,7 +2,7 @@
 
 | Field | Value |
 | --- | --- |
-| Status | **ready** (design locked enough for first implement slice) |
+| Status | **in progress** — first-pass `auto` shipped; tune next |
 | Tree | `~/dev/me/inkcut_luke/` (branch `refactor1`) |
 | Material | Adhesive vinyl first (HTV / reverse-weed later) |
 | Depends on | Existing weed API (`inkcut/job/weeds.py`), ToolpathPlan `kind='weed'`, preview weed layer |
@@ -191,4 +191,11 @@ An adhesive-vinyl job with weedlines on + **Auto peel** produces **few smooth re
 
 **Design inputs locked (2026-08-02):** adhesive only; direction irrelevant; min cuts; smooth lines; outward relief from delicate corners; bound big sticky areas near delicate features; simple peels; prefer long weed areas.
 
-**Next:** implement slice A after user says begin (or refine params first).
+**First pass (2026-08-02):**
+- `weed_mode='auto'` in `inkcut/job/weeds.py` (`auto_weeds`): frame + pocket release + outward delicate reliefs + bridges + sparse strips
+- UI: Weedlines dock “Auto peel (adhesive)”
+- Preview: existing weed layer (`show_weeds`); job plot/copy weedlines on
+- Visual SVG compare: `scripts/preview_auto_weeds.py` → `tests/data/weed_preview/`
+- Tests: 110 passed (incl. auto fewer-than-grid, pocket, delicate tip, job plan)
+
+**Next tune:** fewer false corner reliefs on rects; better bridge gap metric; max_chunk UI knobs; real SVG logos.

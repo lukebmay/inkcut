@@ -57,8 +57,11 @@ Job setting `weed_mode` (`inkcut/job/weeds.py`):
 | `frame` | Padded rectangle around plot and/or each copy (classic box weedline) |
 | `grid` | Axis-aligned grid over the extent; segments clipped away from keep geometry |
 | `region` | Nest closed cut paths; fan/grid inside waste (outer minus islands) |
+| `auto` | **Adhesive peel (first pass):** outer frame + pocket release + outward reliefs from sharp keep corners + selective bridges + **few long strips** on oversized waste (not a dense grid). Minimizes cuts; prefers smooth straight lines. See `agents/plans/auto-weed-peel.md`. |
 
-`weed_grid_spacing` applies to grid/region. Plot vs copy weed checkboxes and padding still apply. Weeds are typed plan segments and transform with design cuts; they never rewrite the machine epilogue.
+`weed_grid_spacing` applies to grid/region and scales auto strip pitch / chunk size. Plot vs copy weed checkboxes and padding still apply. Weeds are typed plan segments and transform with design cuts; they never rewrite the machine epilogue.
+
+Preview: enable **Weed lines** under Preview → Layers (and turn on plot/copy weedlines on the job). Auto weeds use the weed pen and appear in the legend.
 
 ## Summa-class setup (expected, unverified)
 

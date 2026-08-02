@@ -301,11 +301,12 @@ enamldef WeedlinesDockItem(DockItem):
                         'frame': 'Frame (box)',
                         'grid': 'Grid (clipped)',
                         'region': 'Region (nesting)',
+                        'auto': 'Auto peel (adhesive)',
                     }.get(it, it))
                     selected := job.weed_mode
                     hug_width = 'ignore'
                 Label:
-                    text = QApplication.translate("job", "Grid spacing")
+                    text = QApplication.translate("job", "Strip / grid spacing")
                 DoubleSpinBox:
                     value << to_unit(job.weed_grid_spacing, plugin.units)
                     value :: job.weed_grid_spacing = from_unit(change['value'], plugin.units)
@@ -313,6 +314,9 @@ enamldef WeedlinesDockItem(DockItem):
                     maximum = 99999.9
                     minimum = 0.1
                     single_step = 1.0
+                    tool_tip = QApplication.translate(
+                        "job",
+                        "Grid pitch, or auto peel max strip pitch / chunk scale")
         Container:
             padding = 0
 

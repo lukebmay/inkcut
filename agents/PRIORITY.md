@@ -7,20 +7,21 @@
 
 | Pri | Item | Status | Notes |
 | --- | --- | --- | --- |
-| — | *(none)* | — | Waiting: implement `auto` weed peel when user says begin |
+| — | *(none)* | — | Auto peel first pass on master |
 
 ## Human (does not block agent queue unless hard)
 
 | Pri | Item | Severity | Notes |
 | --- | --- | --- | --- |
 | P0 | Summa D760 measure origin/feed/protocol | soft | `agents/blockers/B-summa-d760-measure.md` — unlocks named driver preset |
+| P1 | Review auto weed SVG previews / real jobs | soft | `tests/data/weed_preview/`; app Weed mode = Auto peel |
 | P2 | Upstream contribution packaging | soft | After D760 path trusted |
 
 ## Backlog (agent-eligible when scheduled)
 
 | Pri | Item | Kind | Notes |
 | --- | --- | --- | --- |
-| P1 | Auto weed peel (`auto` mode) | ready | Plan: `agents/plans/auto-weed-peel.md` — adhesive, min cuts, smooth, delicate outward relief |
+| P2 | Auto weed peel tuning | ready | Plan: `agents/plans/auto-weed-peel.md` — knobs, fewer false reliefs, real logos |
 
 ## Rules
 
