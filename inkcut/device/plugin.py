@@ -1162,6 +1162,9 @@ class DevicePlugin(Plugin):
         # Set the protocols based on the declaration
         protocols = [p for p in self.protocols
                      if not driver.protocols or p.id in driver.protocols]
+        # Local list only. The shared registry feeds the language combo.
+        if driver.initial_protocol:
+            protocols.sort(key=lambda protocol: protocol.id != driver.initial_protocol)
 
         # Generate the device
         return driver.factory(driver, transports, protocols, config)

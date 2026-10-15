@@ -3,15 +3,16 @@
 **Owner:** agent. Session notes live on the plan.
 
 
-**Updated:** 2026-08-21
-**Inkcut fork:** **ON HOLD**
-**Focus:** **weedlines** — https://github.com/lukebmay/weedlines
+**Updated:** 2026-10-14
+**Inkcut fork:** one plan resumed by the operator
+**Focus:** plotter unit scale on this fork. Weedlines stays the other track.
 
 ## Active
 
 | Pri | Item | Status | Notes |
 | --- | --- | --- | --- |
-| P0 | Weedlines extract / refine | in progress | `~/dev/me/weedlines` scaffold landed |
+| P0 | Plotter unit scale | waiting, human blocker | `agents/plans/plotter-unit-scale.md`. Code is in. Human section is the test cut. |
+| P1 | Weedlines extract / refine | in progress | `~/dev/me/weedlines` scaffold landed |
 
 ## Remaining on weedlines extract task
 
