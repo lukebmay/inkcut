@@ -126,11 +126,17 @@ model = 'D760'
 width = '740mm'
 initial_protocol = 'dmpl'
 protocols = ['hpgl', 'dmpl']
-connections = ['serial', 'printer']
+connections = ['raw', 'serial', 'printer']
 default_config = {
     'protocol': {
         'dmpl': {'mode': 1},
         'hpgl': {'addressing': '<0.025 mm item>'},
+    },
+    'connection': {
+        'raw': {
+            'device_path': '/dev/ttyUSB0',
+            'mode': 'wb',
+        },
     },
 }
 ```
@@ -207,9 +213,11 @@ registration order. `get_device_from_driver` stable-sorts that id to
 the front of the local filtered list only. `self.protocols` is not
 mutated. Summa D760 is declared after the T600: width `740mm`, no
 length, `initial_protocol = 'dmpl'`, protocols `hpgl` and `dmpl`,
-connections `serial` and `printer`, DM/PL mode 1, HP-GL addressing
-`0.025 mm`. No `scale` key. Output scale stays `[1, 1]`. Protocol
-manifest order and Graphtec lists are unchanged.
+connections `raw`, `serial`, and `printer`, DM/PL mode 1, HP-GL
+addressing `0.025 mm`. Raw defaults to `/dev/ttyUSB0` opened `wb`,
+the same connection the saved Generic driver uses on this machine.
+No `scale` key. Output scale stays `[1, 1]`. Protocol manifest order
+and Graphtec lists are unchanged.
 
 **Tests:** `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/test_plotter_unit_scale.py -q`
 → 35 passed (33 from slice 1, plus D760 factories and the startup
@@ -220,3 +228,10 @@ startup assertion.
 
 **Guessed:** this D760 honors `EC1`. The Human section is the
 measurement, not a proof of that command.
+
+**Connection:** the saved Generic driver opens Raw device
+`/dev/ttyUSB0` in `wb`. The D760 declaration now lists `raw` and
+uses that path and mode as its raw default. Disk stays available.
+The saved "Summa D760 - Custom Driver" was on Save to file; its
+connection was set to the same raw device. Restart Inkcut to load
+it. Do not change device settings in a window that was already open.

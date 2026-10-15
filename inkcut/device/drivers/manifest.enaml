@@ -209,11 +209,17 @@ enamldef DriversManifest(PluginManifest):
             width = '740mm'
             initial_protocol = 'dmpl'
             protocols = ['hpgl', 'dmpl']
-            connections = ['serial', 'printer']
+            connections = ['raw', 'serial', 'printer']
             default_config = {
                 'protocol': {
                     'dmpl': {'mode': 1},
                     'hpgl': {'addressing': '0.025 mm'},
+                },
+                'connection': {
+                    'raw': {
+                        'device_path': '/dev/ttyUSB0',
+                        'mode': 'wb',
+                    },
                 },
             }
 
