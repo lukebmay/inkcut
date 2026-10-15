@@ -240,4 +240,5 @@ it. Do not change device settings in a window that was already open.
 X/Y on, was about 0.07 inch short in X and about 0.02 inch long in
 Y. Output scale on that device is `20/19.93` and `20/20.02`
 (`1.003512`, `0.999001`). The D760 declaration still has no scale
-key. Swap stays on. Generic stays at `[1, 1]`.
+key. Swap stays on. The same scale, speed, force, and step time
+were copied onto the saved Generic driver.
