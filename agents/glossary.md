@@ -43,6 +43,7 @@ the law for the target words.
 | **Goal** | What this plan makes true. |
 | **Acceptance** | Checks that must hold for the plan (local) or for any work (product file `acceptance.md`). |
 | **priority** | `agents/priority.md`: ordered list of plans. Agent-owned. |
+| **Continue** | A prompt that means work `priority.md` from the top. The human does not restate the slices. How the turn runs is catalog `general.md`. |
 | **idea** | Parked thought in `agents/ideas/`. Not a plan until it has a goal and acceptance. |
 | **wrap-up** | End of a successful slice: residue, notes, tests, commit/push per `git.md`. |
 | **residue** | Temp paths, debug prints, failed-attempt code, fake fixtures, live-env leftovers the agent added. Remove before finishing. |
@@ -80,5 +81,10 @@ the law for the target words.
 
 ## Project words
 
-Add product-specific terms here. Keep process terms above in sync with
-the catalog handbook glossary.
+| Word | Meaning |
+| --- | --- |
+| **document path** | The job's `QPainterPath` after layout on the material, including padding and the feed or return move. No device Swap X/Y and no device scale. |
+| **device path** | The document path after the device's one orientation. The pre-cut preview draws this. The protocol converts it to plotter units. |
+| **Swap X/Y** | The device orientation control. It is `QTransform.rotate(90)`, mapping `(x, y)` to `(−y, x)`. It is not an exchange of the two axes. |
+
+Keep the process terms above in sync with the catalog handbook glossary.

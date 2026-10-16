@@ -1,60 +1,25 @@
 # Priority
 
-**Owner:** agent. Session notes live on the plan.
+A prompt of Continue works this list from the top. How that turn runs is catalog `general.md`.
 
+**Owner:** agent. This file is the ordered list of work. Session notes live on the plan.
 
-**Updated:** 2026-10-14
-**Inkcut fork:** one plan resumed by the operator
-**Focus:** plotter unit scale on this fork. Weedlines stays the other track.
+**Updated:** 2026-10-16
+
+Open rows in [`conflicts.md`](./conflicts.md) that have no resolving
+plan must get a plan on this list.
 
 ## Active
 
-| Pri | Item | Status | Notes |
+| Pri | Plan | Status | Notes |
 | --- | --- | --- | --- |
-| P0 | Plotter unit scale | waiting, human blocker | `agents/plans/plotter-unit-scale.md`. Code is in. Human section is the test cut. |
-| P1 | Weedlines extract / refine | in progress | `~/dev/me/weedlines` scaffold landed |
+| P1 | Cut Selection | active | `agents/plans/cut-selection.md`. Inkscape sends the whole document. |
+| P2 | Device path | active | `agents/plans/device-path.md`. First slice makes the preview show the path the cutter already runs. Later slices add origin and a device feed axis. Human section is one D760 cut, after the feed slice. |
 
-## Remaining on weedlines extract task
+Weedlines stays in `~/dev/me/weedlines`. It is not this queue.
 
-- Pause/resume beyond cancel
-- Island-hop picture QA
-- Preview harness polish
-
-See `agents/tasks/weedlines-extract-repo.md`.
-
-## On hold / optional / cancelled
+## On hold / optional
 
 | Item | Status |
 | --- | --- |
-| All inkcut fork product work | hold |
 | inkcut CLI install/update/data | optional |
-| inkcut logging-verbosity | cancelled → weedlines `WEEDLINES_LOG` |
-
-## Leftover handoff (fold into the active plan Session, then delete this section)
-
-# Handoff
-
-**Updated:** 2026-08-21
-**Inkcut fork:** **ON HOLD** — `~/dev/me/inkcut` / `lukebmay/inkcut`
-**Active work:** **weedlines** — `~/dev/me/weedlines` /
-https://github.com/lukebmay/weedlines
-
-## Strategy
-
-Upstream Inkcut is maintained. This fork is only for a **later**
-`weedlib` integration + PR to `inkcut/inkcut`. Do not develop product
-features here now.
-
-## Weedlines (landed scaffold)
-
-- Algorithms: `frame`, `grid`, `island-hop` (ex-`auto`)
-- CLI: `weedlines install` / `update`
-- Logging: `WEEDLINES_LOG`
-- Tests: 136 passed
-
-Continue in the weedlines repo (`agents/HANDOFF.md` there).
-
-## Cancelled / optional
-
-- Cancelled: inkcut logging task
-- Optional: inkcut CLI task (`cli-install-update-data.md`)

@@ -1,7 +1,7 @@
 # plotter-unit-scale — Match plotter units to the command Inkcut sends
 
-**Status:** waiting
-**Updated:** 2026-10-14
+**Status:** accepted
+**Updated:** 2026-10-16
 
 ## Goal
 
@@ -60,10 +60,11 @@ the test cut.
 
 Send a 10 inch line on the D760 with the new DM/PL mode 1 path.
 
-- [ ] The cut is 10 inches within the cutter's own accuracy (about
+- [x] The cut is 10 inches within the cutter's own accuracy (about
       0.2% of the move, or 0.25 mm). That is the right unit. It does
       not prove the firmware honored `EC1`. The same length is what
-      you get when the stored menu is already 0.001 inch.
+      you get when the stored menu is already 0.001 inch. Luke
+      confirmed this on 2026-10-16: the scale already worked.
 - [ ] About 1.6% short (about 9.84 inches) means the cutter ignored
       `EC1` and the menu is 0.025 mm. Switch DM/PL to mode 2 and cut
       again.
@@ -181,10 +182,13 @@ Serial. No parallel implementation.
 
 ## Session
 
-**Status:** waiting on the Human test cut. Both slices are verified.
+**Status:** accepted 2026-10-16. Luke confirmed the scale already
+worked. Both slices were already verified. Do not reopen the
+1021-unit bug. The remaining per-machine trim stays on the saved
+D760 output scale and is not part of this plan.
+
 Slice 1 verifier PASS (33 tests). Slice 2 verifier PASS (35 tests
-in `tests/test_plotter_unit_scale.py`). Do not re-implement. The
-next step is the person at the cutter, in the Human section.
+in `tests/test_plotter_unit_scale.py`). Do not re-implement.
 
 **Slice 1:** `units_per_inch` lives in
 `inkcut/device/protocols/units.py`. Menu order, then the legacy rate:

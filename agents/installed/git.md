@@ -62,6 +62,7 @@ If on a side branch: re-merge default regularly; refactor may defer product merg
 | Situation | Commit? | Push? |
 | --- | --- | --- |
 | Successful wrap-up on default | Yes | Yes if origin |
+| Solid slice during Continue | Yes | Same as a wrap-up, unless a project git file says not to push yet |
 | Side branch wrap-up | Yes | Push side; merge→default when gated |
 | User said don’t | No | No |
 | Secrets in diff | No | No |

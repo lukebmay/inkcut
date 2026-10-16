@@ -1,9 +1,9 @@
 schema = 1
 tool_version = "0.6.1"
-catalog_version = "0.6.1"
+catalog_version = "0.6.2"
 composer_path = "agents.py"
 installed_at = "2026-09-21T00:05:07+00:00"
-updated_at = "2026-10-16T20:20:02+00:00"
+updated_at = "2026-10-16T23:09:17+00:00"
 
 [[files]]
 id = "always"
@@ -40,16 +40,16 @@ read_when = "Writing architecture, user docs, human-facing checklists, or choosi
 [[files]]
 id = "general"
 path = "general.md"
-version = "4.3.1"
-sha256 = "76e077944cb6f198e384a1d19e52a4a5230aad36b354f3b2cfa783b0333739a1"
+version = "4.4.0"
+sha256 = "7d49bb6805b5634ddcadfb7498a46ccc8df877a843c6dab5bd00d86ccc972cd9"
 title = "General process"
-read_when = "Always for multi-step work — plans, slices, handoffs, taskforces, orchestrator, subagents, architecture vs patches, canonical APIs"
+read_when = "Always for multi-step work — plans, slices, handoffs, taskforces, orchestrator, subagents, architecture vs patches, canonical APIs — and when the prompt is Continue"
 
 [[files]]
 id = "git"
 path = "git.md"
-version = "2.1.2"
-sha256 = "3de7be457224b1c6c304113d8127fc79bd8b29395e5b8428843486eea0fd961c"
+version = "2.1.3"
+sha256 = "9f951056a73fb6270e28cdd7709aac8904816f65a57465d4babd353a918bbd93"
 title = "Git"
 read_when = "Before any commit, push, branch, merge, rebase, or release-ladder work"
 

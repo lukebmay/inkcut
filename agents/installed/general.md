@@ -1,8 +1,8 @@
 ---
 title: General process
-read_when: Always for multi-step work — plans, slices, handoffs, taskforces, orchestrator, subagents, architecture vs patches, canonical APIs
+read_when: Always for multi-step work — plans, slices, handoffs, taskforces, orchestrator, subagents, architecture vs patches, canonical APIs — and when the prompt is Continue
 order: 10
-version: 4.3.1
+version: 4.4.0
 ---
 
 # General Agent Guidelines
@@ -224,6 +224,38 @@ There is no separate blockers directory. Fold leftover `agents/blockers/` onto t
 | Never mark a human step done yourself | **FIRM** |
 | No fake blockers | **FIRM** |
 | One line on why it is human-only | **FIRM** |
+
+## Continue (FIRM)
+
+A prompt of "Continue" means work `agents/priority.md` from the top.
+Do not stop after a status report. The main agent orchestrates. It
+does not take a large implementation itself.
+
+Commit each solid slice on the default branch before the next slice
+starts. A slice is solid when its check has been run. When a
+taskforce is used, the slice is solid when the verifier agrees. Do
+not commit a slice the verifier rejected. The commit includes that
+slice's plan Session note and the `priority.md` update. Push still
+follows `git.md`.
+
+Finish the plan that is in progress. Do not leave a slice
+half-written. When the plan's agent checks pass and no Human wait
+remains, archive it under `plans/archived/completed/` and take it
+off the active list. Do not tick a Human checkbox. If a Human wait
+is all that remains, label it in `priority.md` and continue with
+the next plan that is not waiting on the human.
+
+Three reviewers meet when a milestone is complete, or when the turn
+is a check of an architectural design or a plan. A milestone is a
+plan whose agent checks now pass. The three read that work once,
+before the plan is archived. They are a Senior Architect, a Senior
+Developer, and an Abstraction and Modular Design Specialist. They
+do not meet on a timer, and they do not meet after an ordinary
+slice. Apply a change only when all three name the same defect. A
+note is not a defect. Do not pick one reviewer's list.
+
+The word is in the handbook glossary. The human does not restate
+the slices.
 
 ## Subagents
 
