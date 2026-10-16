@@ -9,24 +9,27 @@ this catalog.
 If two handbook sentences still make sense after swapping two of these
 words, rewrite them.
 
-Leftover identifiers still in code or old docs are tracked in
-[`conflicts.md`](./conflicts.md). This file stays the law for the
-target words.
+Leftover identifiers still taught as law go in
+[`conflicts.md`](./conflicts.md). Names already retired are listed
+in [`conflicts-resolved.md`](./conflicts-resolved.md). Those rows
+are not rules (catalog `general.md` Conflicts). This file stays
+the law for the target words.
 
 ## Handbook
 
 | Word | Meaning |
 | --- | --- |
 | **handbook** | The `agents/` directory: policies and procedures for agents operating on this codebase. In prose, say handbook, not “the agents folder.” |
-| **stone** | Product or architecture law. Lives only in human-owned handbook files (`architecture.md`, `acceptance.md`, and any project-declared stricter file). Chat, plan Session, and `priority.md` quotes are not stone. |
-| **leftover** | An old name, path, or behavior still in code or docs that the handbook no longer teaches. Track it in `conflicts.md`. Do not mint more of it. |
+| **stone** | Product or architecture law. Lives only in human-owned handbook files (`architecture.md`, `acceptance.md`, and any project-declared stricter file). Chat, plan Session, `priority.md` quotes, and rows in `conflicts-resolved.md` are not stone. |
+| **leftover** | Code or an old name that lags a settled handbook rule. Track it under **Leftovers** in `conflicts.md`. Do not mint more of it. |
+| **active conflict** | Two living rules disagree. Track it under **Active** in `conflicts.md`. Do not implement either side until the human picks. |
 | **one home per fact** | A rule lives in exactly one file. Other files link; they do not restate. |
 | **catalog** | Portable guideline fragments under `agents/installed/`, refreshed by the `agents` CLI. Handbook files win on conflict. |
 | **extension** | Project file at `agents/<same-path-as-installed>` (or `*.extend.md`) that amends a catalog file. |
 | **override** | Project file `agents/<stem>.override.md` that replaces an installed catalog file for that id. Rare. |
 | **human-owned** | File agents may propose edits to; apply only with explicit permission in the current message. |
-| **agent-owned** | File agents update as ordinary work (`glossary.md`, `priority.md`, `conflicts.md`, plan Session). |
-| **explicit** | Permission word required in the **current** user message for remote SSH or root execution. See catalog `always.md`. |
+| **agent-owned** | File agents update as ordinary work (`glossary.md`, `priority.md`, `conflicts.md`, `conflicts-resolved.md` append-only, plan Session). |
+| **explicit** | Permission word in the **current** user message for `ssh`, `scp`, `sftp`, a remote login, root, or using another program as a back door onto a machine. Not required for `git push`, `git fetch`, or `git pull` the user asked for. See catalog `security.md`. |
 
 ## Work
 

@@ -21,7 +21,9 @@ a human blocker.
 
 How this work is built. Keep global architecture in
 [`architecture.md`](../architecture.md). Do not restate it here.
-Leftover names: [`conflicts.md`](../conflicts.md).
+Leftover names: [`conflicts.md`](../conflicts.md). Retired
+decisions: [`conflicts-resolved.md`](../conflicts-resolved.md).
+Those rows are not rules.
 
 ## Session
 

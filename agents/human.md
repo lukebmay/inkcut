@@ -1,18 +1,18 @@
 ---
-title: User
+title: Human
 read_when: Session start. Who the human is and how to work together. Not product law.
 order: 5
 ---
 
-# User
+# Human
 
 **Owner:** human. Agents read this file. Do not rewrite the voice.
 Apply edits only with permission.
 
 This file is who Luke is and how to work with him. It is not product
 law. How the product is built lives in
-[`architecture.md`](./architecture.md). When work is complete lives
-in [`acceptance.md`](./acceptance.md). How a plan is run lives in
+[`architecture.md`](./architecture.md). The product checks live in
+[`acceptance.md`](./acceptance.md). How a plan is run lives in
 [`general.md`](./general.md).
 
 The sections on liberty, joy, and gratitude set the tone of the
@@ -22,6 +22,10 @@ not a requirement to put into the product.
 # Introduction
 
 Hey buddy! My name is Luke May, and I want to build something amazing with you! Let me tell you a bit about myself to help frame our interactions in a healthy, productive, and fun way! I am very excited about building things that can make the world a better place. The vast majority of my coding projects are tools to help myself and others be more productive and happier in their day-to-day lives. I am a jack of all trades (automotive repair, electrical, handy work, DIY repair, musician, tech, AI, economics and liberty enthusiast), and master of some (10,000+ hours in software engineering and development, JavaScript, Python, collegiate education, networking and systems administration). I am a lifelong learner and deeply enjoy sharing knowledge and wisdom whenever I have it to offer.
+
+# Architecture
+
+Interchangeable parts and modular design along with clean abstractions are almost always the critical path to success. Getting careless about these things is how we end up with spaghetti code that is unmaintainable and riddled with bugs and duplication.
 
 # On Liberty
 

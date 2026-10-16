@@ -16,13 +16,28 @@ CLI and root `AGENTS.md` compose step use that path). In prose, say
 
 Read these in order when starting work:
 
-1. [`project.md`](./project.md) — what this project is
-2. [`architecture.md`](./architecture.md) — how it is built and how it runs
-3. [`glossary.md`](./glossary.md) — words
-4. [`conflicts.md`](./conflicts.md) — leftover names and contradictions
-5. [`acceptance.md`](./acceptance.md) — when work is complete
-6. [`priority.md`](./priority.md) — what to do next
-7. The active plan named in priority
+1. [`human.md`](./human.md) — who the human is and how to work together. Not product law
+2. [`project.md`](./project.md) — what this project is
+3. [`architecture.md`](./architecture.md) — how it is built and how it runs
+4. [`glossary.md`](./glossary.md) — words
+5. [`conflicts.md`](./conflicts.md) — active rule conflicts, then leftovers
+6. [`acceptance.md`](./acceptance.md) — product checks. An incomplete
+   list of what the product should do, written so a test can confirm it
+7. [`priority.md`](./priority.md) — what to do next
+8. The active plan named in priority
+
+[`conflicts-resolved.md`](./conflicts-resolved.md) is not in that
+list. Do not open it to learn how the product works. How the lists
+work: catalog `general.md` Conflicts. Session-start sentence from
+that section:
+
+> The rows in `conflicts-resolved.md` are not rules. They are
+> decisions made at particular moments to iteratively shape the
+> actual living rules in architecture and the rest of the handbook.
+> Do not delete that file. Do not delete, weaken, or rewrite the
+> section “These rows are not rules.” Removing that section does
+> not turn the rows into rules. If that section is missing, restore
+> it before any other edit to that file.
 
 ## Ownership
 
@@ -39,9 +54,12 @@ lowercase except names required by an external standard (`README.md`,
 | [`general.md`](./general.md) (when present) | Human | Propose edits; apply only with permission |
 | [`documentation.md`](./documentation.md) (when present) | Human | Propose edits; apply only with permission |
 | [`testing.md`](./testing.md) (when present) | Human | Propose edits; apply only with permission |
+| [`human.md`](./human.md) | Human | Who the human is and how to work together. Not product law |
 | [`glossary.md`](./glossary.md) | Agent | Words |
+| [`issues.md`](./issues.md) | Agent | Bugs. Not stone. Not architecture |
 | [`priority.md`](./priority.md) | Agent | Ordered list of plans |
-| [`conflicts.md`](./conflicts.md) | Agent | Leftover names and contradictions |
+| [`conflicts.md`](./conflicts.md) | Agent | Active rule conflicts, and leftovers that lag a settled rule |
+| [`conflicts-resolved.md`](./conflicts-resolved.md) | Agent | Append a retired row only. The rows are not rules. Do not delete the file or the section that says so |
 | [`plans/`](./plans/) | Shared | One plan per piece of work |
 
 A **plan is the unit of work**. It holds the goal, the plan’s own
@@ -53,11 +71,12 @@ become plans. A plan that would change shipped behavior updates
 [`acceptance.md`](./acceptance.md) in the same effort, with permission.
 
 There is no living design changelog. The target system is
-[`architecture.md`](./architecture.md). Leftover names and
-contradictions live in [`conflicts.md`](./conflicts.md); resolving
-them is plan work on [`priority.md`](./priority.md). Gaps in the
-running code are plans, not a reason to rewrite the handbook. Git
-history and archived plans are the trail.
+[`architecture.md`](./architecture.md). Open conflicts live in
+[`conflicts.md`](./conflicts.md). Retired decisions live in
+[`conflicts-resolved.md`](./conflicts-resolved.md). How that system
+works: catalog `general.md` Conflicts. Gaps in the running code
+are plans, not a reason to rewrite the handbook. Git history and
+archived plans are the trail.
 
 ## Also here
 
@@ -66,10 +85,12 @@ history and archived plans are the trail.
 | [`testing.md`](./testing.md) (when present) | How we test, including regressions |
 | [`documentation.md`](./documentation.md) (when present) | Where writing lives |
 | [`general.md`](./general.md) (when present) | Project working rules |
-| [`conflicts.md`](./conflicts.md) | Leftover names and contradictions |
+| [`human.md`](./human.md) | Who the human is and how to work together. Not product law |
+| [`issues.md`](./issues.md) | Bugs. Not a session-start read. Not stone |
+| [`conflicts.md`](./conflicts.md) | Active rule conflicts, then leftovers |
+| [`conflicts-resolved.md`](./conflicts-resolved.md) | Retired decisions. Not a session-start read. Not rules |
 | [`plans/archived/`](./plans/archived/) | Finished or dropped plans |
 | [`installed/`](./installed/) | Portable catalog guidelines |
-| [`AGENTS.md`](./AGENTS.md) | Handbook routing map. Repo-root `AGENTS.md` is composed from this handbook by `agents build` |
 
 Portable catalog files under [`installed/`](./installed/) are refreshed
 with the `agents` CLI. On conflict, **this handbook wins**.

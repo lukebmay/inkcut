@@ -60,7 +60,7 @@ _KERNEL_MISSING_STUB = (
 _FRONTMATTER_RE = re.compile(r"\A---\s*\n(.*?)\n---\s*\n?", re.DOTALL)
 
 HANDBOOK_SESSION_FILES = (
-    ("user.md", "Who the human is and how to work together. Not product law"),
+    ("human.md", "Who the human is and how to work together. Not product law"),
     ("README.md", "How this handbook is run"),
     ("project.md", "What this project is"),
     ("architecture.md", "How it is built and how it runs"),
@@ -151,7 +151,7 @@ def _ownership_table() -> List[str]:
         )
     rows.extend(
         [
-            "| `agents/user.md` | **Human** — who the human is and how to collaborate. Not product law |",
+            "| `agents/human.md` | **Human** — who the human is and how to collaborate. Not product law |",
             "| `agents/glossary.md` | **Agent** — words |",
             "| `agents/priority.md` | **Agent** — ordered list of plans |",
             "| `agents/conflicts.md` | **Agent** — active rule conflicts, and leftovers that lag a settled rule |",
