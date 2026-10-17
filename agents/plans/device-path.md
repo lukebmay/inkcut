@@ -122,23 +122,27 @@ today.
 
 ## Session
 
-Not started. Plotter unit scale was accepted on 2026-10-16. Do this
-after `cut-selection` unless the human says to start here. The two
-plans do not share files. `svg.py` is not in this plan.
+Slice 1 landed. The pre-cut preview and the live bed draw the path
+`Device.init` already sends, including today's Swap X/Y, device scale
+with mirror folded in, and today's feed. `config.rotation` no longer
+affects the picture. `Device.transform` and the `rotation` field are
+still there, and the knife does not apply rotation. Protocol bytes
+were not changed. `Device.process` and the order of work inside
+`Job.create` were not changed.
 
-Next step is slice 1 only: the preview shows the path already sent.
-Do not change protocol bytes in that slice. Do not start slice 2 in
-the same slice. The endpoint table above is the slice 2 check.
-Slices 1 and 2 match the current architecture lock. Slice 4 replaces
-Swap X/Y. Do not edit `architecture.md` for that until the human
-locks the feed-axis model.
+`Device.output_path` builds that path. `init` still sets
+`job.info.speed` and still calls `job.create(swap_xy=…, scale=…)`
+with the mirrored scale, then the origin translate when
+`feed_to_end` is on. The preview calls `preview_output_path`, which
+runs `output_path` inside `events_suppressed` and restores `copies`
+and `_desired_copies` if `create` grew them. `init` does not restore.
+`orient_bed` places the device area, the material, and the padding
+in that same frame. The live bed no longer has its private
+`rotate(90)` plus `scale(-1, 1)`.
 
-Evidence: `inkcut/job/models.py` `create` (swap at the `rotate(90)`
-block, feed at the `moveTo` on `boundingRect().top()`),
-`inkcut/device/plugin.py` `init` (calls `job.create(swap_xy=…)`),
-`transform` (scale and `rotation` only), `_reset_preview` (the
-other matrix), `process` (Y-flip, then a final pen-up to
-`currentPosition()` because `toSubpathPolygons` drops a lone
-`moveTo`). Preview uses `job.model` from `create()` with no device
-arguments (`inkcut/job/models.py` `update_document`,
-`inkcut/job/plugin.py` `_refresh_preview`).
+Test: `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/test_device_output.py tests/test_svg.py -q`
+
+Result: 23 passed.
+
+Slice 2 is next. Do not start it here. The Human checkbox stays open.
+The endpoint table in Approach is the slice 2 check.

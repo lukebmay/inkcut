@@ -62,6 +62,17 @@ class Padding:
     BOTTOM = 3
 
 
+def move_path_of(model):
+    path = QPainterPath()
+    for i in range(model.elementCount()):
+        e = model.elementAt(i)
+        if e.isMoveTo():
+            path.lineTo(e.x, e.y)
+        else:
+            path.moveTo(e.x, e.y)
+    return path
+
+
 class JobError(Exception):
     pass
 
@@ -383,11 +394,13 @@ class Job(Model):
         """ Block change events to prevent feedback loops
 
         """
+        blocked = self._blocked
         self._blocked = True
         try:
             yield
         finally:
-            self._blocked = False
+            # Nested create() must not clear an outer block.
+            self._blocked = blocked
 
     @observe('path', 'scale', 'auto_scale', 'lock_scale', 'mirror',
              'align_center', 'rotation', 'auto_rotate', 'copies', 'order',
@@ -580,15 +593,7 @@ class Job(Model):
         """ Returns the path the head moves when not cutting
 
         """
-        # Compute the negative
-        path = QPainterPath()
-        for i in range(self.model.elementCount()):
-            e = self.model.elementAt(i)
-            if e.isMoveTo():
-                path.lineTo(e.x, e.y)
-            else:
-                path.moveTo(e.x, e.y)
-        return path
+        return move_path_of(self.model)
 
     @property
     def cut_path(self):

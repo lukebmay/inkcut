@@ -347,6 +347,22 @@ class DeviceConfig(Model):
             self.step_time = self._default_step_time()
 
 
+def orient_bed(path, swap_xy, scale):
+    """ Bed outline in the frame Job.create returns.
+
+    The job path already includes padding. The bed does not.
+    """
+    framed = QtGui.QTransform.fromScale(1, -1).map(path)
+    if scale:
+        framed = QtGui.QTransform.fromScale(scale[0], scale[1]).map(framed)
+    if swap_xy:
+        rot = QtGui.QTransform()
+        rot.rotate(90)
+        framed = rot.map(framed)
+    bb = framed.boundingRect()
+    return QtGui.QTransform.fromTranslate(-bb.left(), -bb.bottom()).map(framed)
+
+
 class Device(Model):
     """ The standard device. This is a standard model used throughout the
     application. An instance of this is configured by specifying a
@@ -546,6 +562,37 @@ class Device(Model):
 
         return path
 
+    def output_scale(self):
+        """ Device scale with mirror folded in, as init passes to create. """
+        scale = self.config.scale[:]
+        if self.config.mirror_x:
+            scale[0] *= -1
+        if self.config.mirror_y:
+            scale[1] *= -1
+        return scale
+
+    def output_path(self, job):
+        """ Path init sends to the cutter. Does not apply config.rotation.
+        """
+        scale = self.output_scale()
+        model = job.create(swap_xy=self.config.swap_xy, scale=scale)
+        if model is not None and job.feed_to_end:
+            x, y, z = self.origin
+            model.translate(x, -y)
+        return model
+
+    def preview_output_path(self, job):
+        """ Same path as output_path. Does not keep the copy count create() grows.
+        """
+        copies = job.copies
+        desired = job._desired_copies
+        with job.events_suppressed():
+            model = self.output_path(job)
+            if job.copies != copies or job._desired_copies != desired:
+                job.copies = copies
+                job._desired_copies = desired
+        return model
+
     def init(self, job):
         """ Initialize the job. This should do any final path manipulation
         required by the device (or as specified by the config) and any filters
@@ -572,24 +619,10 @@ class Device(Model):
         units = config.speed_units.split("/")[0]
         job.info.speed = from_unit(config.speed, units)
 
-        scale = config.scale[:]
-        if config.mirror_x:
-            scale[0] *= -1 if config.mirror_x else 1
-        if config.mirror_y:
-            scale[1] *= -1 if config.mirror_y else 1
-
-        # Get the internal QPainterPath "model" transformed to how this
-        # device outputs
-        model = job.create(swap_xy=config.swap_xy, scale=scale)
-
-        if job.feed_to_end:
-            #: Move the job to the new origin
-            x, y, z = self.origin
-            model.translate(x, -y)
+        model = self.output_path(job)
 
         #: TODO: Apply filters here
 
-        #: Return the transformed model
         return model
 
     @defer.inlineCallbacks
@@ -1266,25 +1299,18 @@ class DevicePlugin(Plugin):
         """
         view_items = []
 
-        #: Transform used by the view
         preview_plugin = self.workbench.get_plugin('inkcut.preview')
         plot = preview_plugin.live_preview
-        t = preview_plugin.transform
 
         #: Draw the device
         device = self.device
         job = device.job
-
-        r = QtGui.QTransform()
-        if device.config.swap_xy:
-            # Rotate area to match swapped axis
-            r.rotate(90)
-            r.scale(-1, 1)
+        scale = device.output_scale()
+        swap_xy = device.config.swap_xy
 
         if device and device.area:
-            area = device.area
             view_items.append(
-                dict(path=device.transform(r.map(t.map(device.area.path))),
+                dict(path=orient_bed(device.area.path, swap_xy, scale),
                      pen=plot.pen_device,
                      skip_autorange=True)
             )
@@ -1292,10 +1318,10 @@ class DevicePlugin(Plugin):
         if job and job.material:
             # Also observe any change to job.media and job.device
             view_items.extend([
-                dict(path=device.transform(r.map(t.map(job.material.path))),
+                dict(path=orient_bed(job.material.path, swap_xy, scale),
                      pen=plot.pen_media,
                      skip_autorange=True),
-                dict(path=device.transform(r.map(t.map(job.material.padding_path))),
+                dict(path=orient_bed(job.material.padding_path, swap_xy, scale),
                      pen=plot.pen_media_padding, skip_autorange=True)
             ])
 
