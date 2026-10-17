@@ -14,7 +14,7 @@ plan must get a plan on this list.
 | Pri | Plan | Status | Notes |
 | --- | --- | --- | --- |
 | P1 | Cut Selection | waiting | `agents/plans/cut-selection.md`. Human checkbox is still his. On 2026-10-17 he opened one of two text objects with Cut selection and only that object came in. |
-| P2 | Device path | waiting | `agents/plans/device-path.md`. Do not start slice 3. With Swap X/Y on, Feed After ends at the bottom-right. The preview-orientation design meeting is still open. |
+| P2 | Device path | waiting | `agents/plans/device-path.md`. Do not add another final-point patch. Next slice is the mounting in Frames: feed direction and origin side, then delete the y = 0 patch. Nine anchors wait. With Swap on, Feed After is bottom-right and Return is bottom-left. |
 
 Weedlines stays in `~/dev/me/weedlines`. It is not this queue.
 
