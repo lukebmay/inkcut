@@ -39,5 +39,6 @@ old decision as it was. Append a new live contradiction to
 
 | Leftover | Decision then | Plan |
 | --- | --- | --- |
+| `Job.create` rotated for the cutter, then appended the feed. The preview drew another path. | Slice 2 orients the document path, feed included. The preview draws that path. | [`device-path`](./plans/device-path.md) |
 | `design.md` / design changelog as living law | This **handbook**. [`architecture.md`](./architecture.md). | Reading rule is enough. |
 | `HANDOFF.md` as start-here | Plan **Session** + [`priority.md`](./priority.md). | Reading rule is enough. |

@@ -347,20 +347,29 @@ class DeviceConfig(Model):
             self.step_time = self._default_step_time()
 
 
-def orient_bed(path, swap_xy, scale):
-    """ Bed outline in the frame Job.create returns.
-
-    The job path already includes padding. The bed does not.
+def orient_path(path, swap_xy, scale):
+    """ Scale, then rotate(90) when Swap X/Y is on; the park includes
+    the document origin so padding is not pulled away.
     """
-    framed = QtGui.QTransform.fromScale(1, -1).map(path)
+    oriented = path
     if scale:
-        framed = QtGui.QTransform.fromScale(scale[0], scale[1]).map(framed)
+        oriented = QtGui.QTransform.fromScale(scale[0], scale[1]).map(oriented)
     if swap_xy:
         rot = QtGui.QTransform()
         rot.rotate(90)
-        framed = rot.map(framed)
-    bb = framed.boundingRect()
-    return QtGui.QTransform.fromTranslate(-bb.left(), -bb.bottom()).map(framed)
+        oriented = rot.map(oriented)
+    # Union with (0, 0): the ink box alone would delete the margin.
+    bounds = oriented.boundingRect()
+    left = min(bounds.left(), 0.0)
+    bottom = max(bounds.bottom(), 0.0)
+    return QtGui.QTransform.fromTranslate(-left, -bottom).map(oriented)
+
+
+def orient_bed(path, swap_xy, scale):
+    """ Bed outline in the oriented path frame. Rects are stored y-down.
+    """
+    framed = QtGui.QTransform.fromScale(1, -1).map(path)
+    return orient_path(framed, swap_xy, scale)
 
 
 class Device(Model):
@@ -563,7 +572,7 @@ class Device(Model):
         return path
 
     def output_scale(self):
-        """ Device scale with mirror folded in, as init passes to create. """
+        """ Device scale with mirror folded in. """
         scale = self.config.scale[:]
         if self.config.mirror_x:
             scale[0] *= -1
@@ -574,24 +583,18 @@ class Device(Model):
     def output_path(self, job):
         """ Path init sends to the cutter. Does not apply config.rotation.
         """
-        scale = self.output_scale()
-        model = job.create(swap_xy=self.config.swap_xy, scale=scale)
-        if model is not None and job.feed_to_end:
+        if job.model is None:
+            return None
+        path = orient_path(job.model, self.config.swap_xy, self.output_scale())
+        if job.feed_to_end:
             x, y, z = self.origin
-            model.translate(x, -y)
-        return model
+            path.translate(x, -y)
+        return path
 
     def preview_output_path(self, job):
-        """ Same path as output_path. Does not keep the copy count create() grows.
+        """ Same path as output_path. Does not call create().
         """
-        copies = job.copies
-        desired = job._desired_copies
-        with job.events_suppressed():
-            model = self.output_path(job)
-            if job.copies != copies or job._desired_copies != desired:
-                job.copies = copies
-                job._desired_copies = desired
-        return model
+        return self.output_path(job)
 
     def init(self, job):
         """ Initialize the job. This should do any final path manipulation

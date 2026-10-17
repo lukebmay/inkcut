@@ -14,7 +14,7 @@ plan must get a plan on this list.
 | Pri | Plan | Status | Notes |
 | --- | --- | --- | --- |
 | P1 | Cut Selection | waiting | `agents/plans/cut-selection.md`. Human: Inkscape Cut selection on one path in a file that has several. The other paths stay out of the preview. Restart Inkscape first. |
-| P2 | Device path | active | `agents/plans/device-path.md`. Slice 1 is on master: the preview shows the path the cutter already runs. Next is slice 2, which moves that feed with the picture. Human cut is after the feed change. |
+| P2 | Device path | active | `agents/plans/device-path.md`. Slice 2 is on master: Feed After rotates with the picture. Next is slice 3, nine origin anchors. The default is today's origin. Human cut can check the feed now. |
 
 Weedlines stays in `~/dev/me/weedlines`. It is not this queue.
 

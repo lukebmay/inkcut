@@ -426,9 +426,8 @@ class Job(Model):
         if model:
             self.model = model
 
-    def create(self, swap_xy=False, scale=None):
-        """ Create a path model that is rotated and scaled
-
+    def create(self):
+        """ The document path (padding, return or feed), not the device orientation.
         """
         model = QPainterPath()
 
@@ -475,16 +474,6 @@ class Job(Model):
         else:
             py = -self.material.padding_bottom
 
-        # Scale and rotate
-        if scale:
-            model = QTransform.fromScale(*scale).map(model)
-            px, py = px*abs(scale[0]), py*abs(scale[1])
-
-        if swap_xy:
-            t = QTransform()
-            t.rotate(90)
-            model = t.map(model)
-
         # Move to 0,0
         bbox = model.boundingRect()
         p = bbox.bottomLeft()
@@ -496,9 +485,6 @@ class Job(Model):
             tx += -bbox.right() if self.mirror[0] else bbox.left()
             ty += bbox.bottom() if self.mirror[1] else -bbox.top()
 
-        # If swapped, make sure padding is still correct
-        if swap_xy:
-            px, py = -py, -px
         tx += px
         ty += py
 

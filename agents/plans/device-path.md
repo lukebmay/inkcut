@@ -122,27 +122,36 @@ today.
 
 ## Session
 
-Slice 1 landed. The pre-cut preview and the live bed draw the path
-`Device.init` already sends, including today's Swap X/Y, device scale
-with mirror folded in, and today's feed. `config.rotation` no longer
-affects the picture. `Device.transform` and the `rotation` field are
-still there, and the knife does not apply rotation. Protocol bytes
-were not changed. `Device.process` and the order of work inside
-`Job.create` were not changed.
+Slice 2 landed. `Job.create` builds the document path only. That path
+has padding, the job filters, then either the return to origin or
+Feed After. `create` no longer takes `swap_xy` or device scale, and
+the padding axis-remix is gone.
 
-`Device.output_path` builds that path. `init` still sets
-`job.info.speed` and still calls `job.create(swap_xy=…, scale=…)`
-with the mirrored scale, then the origin translate when
-`feed_to_end` is on. The preview calls `preview_output_path`, which
-runs `output_path` inside `events_suppressed` and restores `copies`
-and `_desired_copies` if `create` grew them. `init` does not restore.
-`orient_bed` places the device area, the material, and the padding
-in that same frame. The live bed no longer has its private
-`rotate(90)` plus `scale(-1, 1)`.
+`orient_path` is the one device orientation. It scales, with mirror
+folded into that scale, then `rotate(90)` when Swap X/Y is on. It
+then parks the path into the negative-y frame `Device.process`
+flips. The park bounds include the document origin. Padding is the
+empty margin between that origin and the ink, so parking the ink box
+alone would delete it.
+
+A 200 by 50 rectangle and Feed After of 30 ends at device `(0, 80)`
+with Swap off and `(80, 200)` with Swap on. Padding left 10 and
+bottom 20, Swap on, puts the art at screen `(20, 0, 50, 200)` and
+the feed at device `(100, 210)`.
+
+`init` and the preview orient `job.model`. They do not call
+`create()`, so they do not grow `auto_copies`. `update_document`
+still does. The origin translate after orientation is unchanged.
+`config.rotation` still does not affect the picture or the knife.
+`Device.transform` and the field remain. Protocol bytes were not
+changed. `Device.process` was not changed.
 
 Test: `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/test_device_output.py tests/test_svg.py -q`
 
-Result: 23 passed.
+Result: 28 passed.
 
-Slice 2 is next. Do not start it here. The Human checkbox stays open.
-The endpoint table in Approach is the slice 2 check.
+Slice 3 is next: nine origin anchors. The default is today's origin.
+The Human checkbox stays open. He can cut the feed check now.
+`architecture.md` Running code still says `Job.create` takes
+`swap_xy`. That paragraph is stale. Do not edit it until Luke says
+to. Slice 4 still waits for him to lock the feed-axis model.

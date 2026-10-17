@@ -35,6 +35,4 @@ None.
 
 ## Leftovers
 
-| Leftover | Read as | Status | Plan |
-| --- | --- | --- | --- |
-| `Job.create` applies device Swap X/Y and device scale, then appends the feed. The main preview draws the unrotated path. The live bed uses a third matrix. | The device applies one orientation to the whole document path. The preview draws that device path. | resolving | [`device-path`](./plans/device-path.md) |
+None.

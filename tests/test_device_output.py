@@ -1,4 +1,4 @@
-"""The preview path is the path Device.init already sends.
+"""The cutter runs the oriented document path, and the preview draws it.
 
 No cutter and no workbench. Run with QT_QPA_PLATFORM=offscreen.
 """
@@ -17,11 +17,12 @@ SVG = "tests/data/rect.svg"
 # swap, scale, padding, artwork screen (x, y, w, h), feed in the path, bed screen
 CASES = [
     (False, (1, 1), [0, 0, 0, 0], (0, 0, 200, 50), (0, -80), (0, 0, 1000, 400)),
-    (True, (1, 1), [0, 0, 0, 0], (0, 0, 50, 200), (0, -230), (0, 0, 400, 1000)),
-    (True, (1, 1), [10, 0, 0, 20], (20, 10, 50, 200), (0, -240), (0, 0, 400, 1000)),
-    (True, (2, 1), [10, 0, 0, 20], (20, 20, 50, 400), (0, -450), (0, 0, 400, 2000)),
-    (False, (-1, 1), [0, 0, 0, 0], (0, 0, 200, 50), (0, -80), (0, 0, 1000, 400)),
-    (True, (-1, 1), [0, 0, 0, 0], (0, 0, 50, 200), (0, -230), (0, 0, 400, 1000)),
+    (True, (1, 1), [0, 0, 0, 0], (0, 0, 50, 200), (80, -200), (0, 0, 400, 1000)),
+    (True, (1, 1), [10, 0, 0, 20], (20, 0, 50, 200), (100, -210), (0, 0, 400, 1000)),
+    (True, (2, 1), [10, 0, 0, 20], (20, 0, 50, 400), (100, -420), (0, 0, 400, 2000)),
+    (False, (-1, 1), [0, 0, 0, 0], (0, 0, 200, 50), (200, -80), (0, 0, 1000, 400)),
+    (True, (-1, 1), [0, 0, 0, 0], (0, 0, 50, 200), (80, 0), (0, 0, 400, 1000)),
+    (False, (1, 1), [10, 0, 0, 20], (10, 20, 200, 50), (0, -100), (0, 0, 1000, 400)),
 ]
 
 
@@ -36,6 +37,7 @@ def make_job(padding):
     job.feed_after = 30
     job.copies = 1
     job._desired_copies = 1
+    job.model = job.create()
     return job
 
 
@@ -95,9 +97,10 @@ def assert_inside(inner, outer):
         "swap-on-scale-2-1",
         "mirror-x-swap-off",
         "mirror-x-swap-on",
+        "swap-off-padding",
     ],
 )
-def test_output_path_and_bed_match_today(swap_xy, scale, padding, art, feed, bed):
+def test_oriented_path_matches_the_bed(swap_xy, scale, padding, art, feed, bed):
     job = make_job(padding)
     device = make_device(swap_xy=swap_xy, scale=scale)
     path = device.output_path(job)
@@ -115,6 +118,34 @@ def test_output_path_and_bed_match_today(swap_xy, scale, padding, art, feed, bed
     assert job.copies == 1
 
 
+def device_end(path):
+    x, y = feed_point(path)
+    return (x, -y)
+
+
+def test_swap_off_device_end():
+    path = make_device(swap_xy=False).output_path(make_job([0, 0, 0, 0]))
+    assert device_end(path) == pytest.approx((0, 80))
+
+
+def test_swap_on_device_end():
+    path = make_device(swap_xy=True).output_path(make_job([0, 0, 0, 0]))
+    assert device_end(path) == pytest.approx((80, 200))
+    assert screen_box(artwork(path)) == pytest.approx((0, 0, 50, 200))
+
+
+def test_swap_on_padding_keeps_the_inset():
+    path = make_device(swap_xy=True).output_path(make_job([10, 0, 0, 20]))
+    assert screen_box(artwork(path)) == pytest.approx((20, 0, 50, 200))
+    assert device_end(path) == pytest.approx((100, 210))
+
+
+def test_output_path_does_not_mutate_job_model():
+    job = make_job([0, 0, 0, 0])
+    make_device(swap_xy=True).output_path(job)
+    assert feed_point(job.model) == pytest.approx((0, -80))
+
+
 @pytest.fixture
 def quiet_job_str(monkeypatch):
     # init logs the job. Formatting it reads document, which needs a workbench.
@@ -125,7 +156,7 @@ def test_origin_translates_the_swapped_feed(quiet_job_str):
     job = make_job([0, 0, 0, 0])
     device = make_device(swap_xy=True, origin=(5, 7))
     path = device.init(job)
-    assert feed_point(path) == pytest.approx((5, -237))
+    assert feed_point(path) == pytest.approx((85, -207))
     units = device.config.speed_units.split("/")[0]
     assert job.info.speed == from_unit(device.config.speed, units)
 
@@ -175,7 +206,7 @@ def test_pen_up_path_draws_the_feed():
     moves = move_path_of(path)
     end = moves.elementAt(moves.elementCount() - 1)
     assert end.isLineTo()
-    assert (end.x, end.y) == pytest.approx((0, -230))
+    assert (end.x, end.y) == pytest.approx((80, -200))
 
 
 def test_preview_refresh_does_not_grow_copies(quiet_job_str):
@@ -194,7 +225,13 @@ def test_preview_refresh_does_not_grow_copies(quiet_job_str):
     cut.auto_copies = True
     cut._blocked = False
     device.init(cut)
-    assert cut.copies > 1
+    assert cut.copies == 1
+
+    growing = make_job([0, 0, 0, 0])
+    growing.auto_copies = True
+    growing._blocked = False
+    growing.update_document()
+    assert growing.copies > 1
 
 
 def test_job_plugin_imports():
