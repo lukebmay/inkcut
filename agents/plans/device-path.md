@@ -1,6 +1,6 @@
 # device-path — One path for the preview and the cutter
 
-**Status:** waiting
+**Status:** active
 **Updated:** 2026-10-17
 
 ## Goal
@@ -230,56 +230,74 @@ path.
 
 ## Session
 
-Slice 2 landed. `Job.create` builds the document path only. That path
-has padding, the job filters, then either the return to origin or
-Feed After. `create` no longer takes `swap_xy` or device scale, and
-the padding axis-remix is gone.
+Next session implements Approach step 3 only. Luke asked for that
+on 2026-10-17. The open Human checkboxes stay open and do not block
+this slice. Do not tick them. Do not edit `architecture.md`. Do not
+send a job to the cutter, including `/dev/ttyUSB0`. Do not open a
+pull request. Luke opens any upstream PR himself.
+`inkcut/inkcut#442` was closed on 2026-10-17 and branch
+`pr/d760-path` was deleted. Do not reopen it.
 
-`orient_path` is the one device orientation. It scales, with mirror
-folded into that scale, then `rotate(90)` when Swap X/Y is on. It
-then parks the path into the negative-y frame `Device.process`
-flips. The park bounds include the document origin. Padding is the
-empty margin between that origin and the ink, so parking the ink box
-alone would delete it.
+On Continue, orchestrate this slice with one implementer. Do not
+start step 4 in the same turn. Do not resume a finished subagent.
+Do not hold another design meeting. Frames is the model.
 
-A 200 by 50 rectangle and Feed After of 30 ends at device `(0, 80)`
-with Swap off and `(80, 0)` with Swap on. Swap on keeps the
-`rotate(90)` artwork and moves only the final pen-up from the top
-edge to the bottom edge, past the right side by the feed distance.
-Padding left 10 and bottom 20, Swap on, puts the art at screen
-`(20, 0, 50, 200)` and the feed at device `(100, 0)`.
+Replace the Swap X/Y checkbox on the device Output page
+(`inkcut/device/view.enaml`) with two device facts: feed direction
+and origin side (left or right). One source of truth. Do not leave
+the checkbox beside the new controls. `feed_to_end` and
+`feed_after` stay on the job. Feed direction is not a job setting.
+Build Return and Feed After from that mounting inside the orient,
+on the whole path, strokes and pen-ups together. Then delete the
+`setElementPositionAt` y = 0 patch in `Device.output_path`.
+`orient_path`, `orient_bed`, `output_path`, the pre-cut preview,
+and the live bed (`inkcut/job/plugin.py` and `inkcut/device/plugin.py`)
+share that mounting. `Device.process` keeps `scale(1, -1)`.
+Protocol files stay.
 
-`init` and the preview orient `job.model`. They do not call
-`create()`, so they do not grow `auto_copies`. `update_document`
-still does. The origin translate after orientation is unchanged.
-`config.rotation` still does not affect the picture or the knife.
-`Device.transform` and the field remain. Protocol bytes were not
-changed. `Device.process` was not changed.
+`tests/test_device_output.py` must stay green. Rectangle 200 by 50,
+feed 30, 90 DPI px. Device end is `(path_x, -path_y)`.
+
+- Saved `swap_xy` false, and the new default (origin on the left):
+  feed device `(0, 80)`, path point `(0, -80)`, art screen
+  `(0, 0, 200, 50)`. Return device `(0, 0)`, same art. Padding
+  `[10, 0, 0, 20]`: feed `(0, 100)`, art `(10, 20, 200, 50)`.
+- Saved `swap_xy` true loads as today's `rotate(90)` mounting. Do
+  not turn the artwork the other way. Feed device `(80, 0)`, path
+  point `(80, 0)`, art `(0, 0, 50, 200)`. Return device `(0, 0)`,
+  same art. Padding `[10, 0, 0, 20]`: feed `(100, 0)`, art
+  `(20, 0, 50, 200)`. Scale `(2, 1)` with that pad: feed
+  `(100, 0)`, art `(20, 0, 50, 400)`. Device origin `(5, 7)`
+  applies only when `feed_to_end`, after the mounting: feed path
+  point `(85, -7)`. Return is not origin-translated.
+- Factory presets that set `swap_xy` true must keep that geometry:
+  Roland Stika SV-15, SV-12, and SV-8, and Silhouette Cameo 4
+  (Cameo also scale `5.64` and both mirrors) in
+  `inkcut/device/drivers/manifest.enaml`. The Summa D760 factory
+  preset does not set `swap_xy`. Luke's saved profile does. Do not
+  change that preset's raw path.
+- `job.model` is not mutated. The document feed stays `(0, -80)`.
+  `init` does not call `create()`, so `auto_copies` do not grow.
+  `config.rotation` stays off both the picture and the knife. Do
+  not give `Device.transform` a preview-only rotation. Leave the
+  commented rotation widget commented.
+- Do not move the on-screen origin to the widget's bottom-right.
+  That would move the knife. A facing view that redraws the origin
+  is a later change of picture and knife together, and it needs a
+  test cut.
+
+The measurement paragraph above Frames that cites device `(0, 230)`
+is the feed from before the y = 0 patch. Do not restore it.
+Acceptance and the tests are the contract.
 
 Test: `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/test_device_output.py -q`
 
-Result: 20 passed. The artwork boxes are unchanged. Return with
-Swap on ends at device `(0, 0)`.
+Last run on this contract: 20 passed, at `7705c1c`. That commit is
+the Return bookmark. `44579bd` is Feed After after Luke cut it.
+`e2920a6` is the known-good cut from before either corner snap. He
+has not re-tested Return in Inkscape.
 
-The dock could not raise the window because Qt never set WM_CLASS.
-`application_factory` now names the application `inkcut` before the
-window exists. That fix is separate from this plan.
-
-`7705c1c` is the return-to-origin bookmark. With Swap on, Return
-ends at device `(0, 0)` and Feed After ends at the bottom-right.
-Both are the final pen-up with its y set to 0 after `orient_path`.
-The artwork is still `rotate(90)`. Swap off is unchanged: Return
-at the bottom-left, Feed After at the top-left.
-
-Do not add another special case on that point. The next slice is
-the mounting in Frames: a device feed direction and an origin side,
-and then delete the y = 0 patch. Nine anchors wait until that
-mounting is the only orient. Luke described the D760 on
-2026-10-17: front of the machine, origin at the bottom-right,
-vinyl top to bottom, positive coordinates, and the same path for
-drawing and cutting. That writeup is Frames. His checkbox on the
-facing view stays open until he says the writeup is right.
-
-The feed cut checkbox stays open. `architecture.md` Running code
-still says `Job.create` takes `swap_xy`. That paragraph is stale.
-Do not edit it until Luke says to.
+The facing-view checkbox stays open until he says Frames is right.
+The feed-cut checkbox stays open. Neither blocks step 3.
+`architecture.md` Running code still says `Job.create` takes
+`swap_xy`. Leave that until he says to edit it.

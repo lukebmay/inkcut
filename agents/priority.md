@@ -14,7 +14,7 @@ plan must get a plan on this list.
 | Pri | Plan | Status | Notes |
 | --- | --- | --- | --- |
 | P1 | Cut Selection | waiting | `agents/plans/cut-selection.md`. Human checkbox is still his. On 2026-10-17 he opened one of two text objects with Cut selection and only that object came in. |
-| P2 | Device path | waiting | `agents/plans/device-path.md`. Do not add another final-point patch. Next slice is the mounting in Frames: feed direction and origin side, then delete the y = 0 patch. Nine anchors wait. With Swap on, Feed After is bottom-right and Return is bottom-left. |
+| P2 | Device path | active | `agents/plans/device-path.md`. Next session starts Approach step 3: device feed direction and origin side, then delete the y = 0 patch. Nine anchors wait. Human checkboxes stay open and do not block this slice. Do not open a pull request. |
 
 Weedlines stays in `~/dev/me/weedlines`. It is not this queue.
 
