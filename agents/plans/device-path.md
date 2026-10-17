@@ -35,9 +35,9 @@ can aim along the carriage.
       the vinyl does not turn the other way.
 - [ ] With Swap X/Y off, a rectangle 200 by 50 (90 DPI px) and Feed
       After of 30 ends at device `(0, 80)` after the process Y-flip.
-      With Swap X/Y on, that same feed stays on the edge that was the
-      material top, which lands on device X, not on a new far-Y past
-      the original width.
+      With Swap X/Y on, that feed ends at the bottom-right, device
+      `(80, 0)`: past the right edge by the feed distance, on the
+      bottom edge. The artwork stays the `rotate(90)` picture.
 - [ ] Slice 3 adds the nine origin anchors. The default anchor is the
       origin the code uses today, so an existing job does not jump.
       The preview shows the anchor.
@@ -122,9 +122,11 @@ A 200 by 50 rectangle, feed 30, no padding, checked with PyQt5:
   extra 30 is past the original width, and X is back at 0.
 - Feed appended first, then the same `rotate(90)` and Y-flip:
   device end `(80, 200)`. The extra 30 stays past the original top.
+  That point is the top-right. Feed After then moves it to the
+  bottom edge, device `(80, 0)`, and leaves the artwork where this
+  row put it.
 
-The third row is the target. The second row is what the D760 runs
-today.
+The second row is the old feed, appended after the rotation.
 
 ## Session
 
@@ -141,9 +143,11 @@ empty margin between that origin and the ink, so parking the ink box
 alone would delete it.
 
 A 200 by 50 rectangle and Feed After of 30 ends at device `(0, 80)`
-with Swap off and `(80, 200)` with Swap on. Padding left 10 and
-bottom 20, Swap on, puts the art at screen `(20, 0, 50, 200)` and
-the feed at device `(100, 210)`.
+with Swap off and `(80, 0)` with Swap on. Swap on keeps the
+`rotate(90)` artwork and moves only the final pen-up from the top
+edge to the bottom edge, past the right side by the feed distance.
+Padding left 10 and bottom 20, Swap on, puts the art at screen
+`(20, 0, 50, 200)` and the feed at device `(100, 0)`.
 
 `init` and the preview orient `job.model`. They do not call
 `create()`, so they do not grow `auto_copies`. `update_document`
@@ -152,21 +156,20 @@ still does. The origin translate after orientation is unchanged.
 `Device.transform` and the field remain. Protocol bytes were not
 changed. `Device.process` was not changed.
 
-Test: `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/test_device_output.py tests/test_svg.py -q`
+Test: `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/test_device_output.py -q`
 
-Result: 28 passed.
+Result: 18 passed. The artwork boxes are the same as before this corner change.
 
 The dock could not raise the window because Qt never set WM_CLASS.
 `application_factory` now names the application `inkcut` before the
 window exists. That fix is separate from this plan.
 
-Do not start slice 3. Luke saw the preview turned 90° clockwise and
-asked for a design meeting before any layout change. That turn is
-Swap X/Y: `rotate(90)`, origin parked at the bottom-left, Feed After
-traveling out the right of the artwork. It matches the knife. It
-does not match the D760 as he faces it, origin at the bottom-right
-and the vinyl moving top to bottom. A view change has to move the
-picture and the knife together. Do not add a preview-only rotation.
+Do not start slice 3. The preview is still the `rotate(90)` picture,
+origin parked at the bottom-left. With Swap on, Feed After now ends
+at the bottom-right of that picture. Luke still wants a design
+meeting before any further layout change: origin at the bottom-right
+as he faces the D760, vinyl moving top to bottom, picture and knife
+together. Do not add a preview-only rotation.
 
 Slice 3, when the meeting is done, is still nine origin anchors.
 The default is today's origin. The feed cut checkbox stays open.

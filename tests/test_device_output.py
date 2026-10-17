@@ -17,9 +17,9 @@ SVG = "tests/data/rect.svg"
 # swap, scale, padding, artwork screen (x, y, w, h), feed in the path, bed screen
 CASES = [
     (False, (1, 1), [0, 0, 0, 0], (0, 0, 200, 50), (0, -80), (0, 0, 1000, 400)),
-    (True, (1, 1), [0, 0, 0, 0], (0, 0, 50, 200), (80, -200), (0, 0, 400, 1000)),
-    (True, (1, 1), [10, 0, 0, 20], (20, 0, 50, 200), (100, -210), (0, 0, 400, 1000)),
-    (True, (2, 1), [10, 0, 0, 20], (20, 0, 50, 400), (100, -420), (0, 0, 400, 2000)),
+    (True, (1, 1), [0, 0, 0, 0], (0, 0, 50, 200), (80, 0), (0, 0, 400, 1000)),
+    (True, (1, 1), [10, 0, 0, 20], (20, 0, 50, 200), (100, 0), (0, 0, 400, 1000)),
+    (True, (2, 1), [10, 0, 0, 20], (20, 0, 50, 400), (100, 0), (0, 0, 400, 2000)),
     (False, (-1, 1), [0, 0, 0, 0], (0, 0, 200, 50), (200, -80), (0, 0, 1000, 400)),
     (True, (-1, 1), [0, 0, 0, 0], (0, 0, 50, 200), (80, 0), (0, 0, 400, 1000)),
     (False, (1, 1), [10, 0, 0, 20], (10, 20, 200, 50), (0, -100), (0, 0, 1000, 400)),
@@ -130,14 +130,14 @@ def test_swap_off_device_end():
 
 def test_swap_on_device_end():
     path = make_device(swap_xy=True).output_path(make_job([0, 0, 0, 0]))
-    assert device_end(path) == pytest.approx((80, 200))
+    assert device_end(path) == pytest.approx((80, 0))
     assert screen_box(artwork(path)) == pytest.approx((0, 0, 50, 200))
 
 
 def test_swap_on_padding_keeps_the_inset():
     path = make_device(swap_xy=True).output_path(make_job([10, 0, 0, 20]))
     assert screen_box(artwork(path)) == pytest.approx((20, 0, 50, 200))
-    assert device_end(path) == pytest.approx((100, 210))
+    assert device_end(path) == pytest.approx((100, 0))
 
 
 def test_output_path_does_not_mutate_job_model():
@@ -156,7 +156,7 @@ def test_origin_translates_the_swapped_feed(quiet_job_str):
     job = make_job([0, 0, 0, 0])
     device = make_device(swap_xy=True, origin=(5, 7))
     path = device.init(job)
-    assert feed_point(path) == pytest.approx((85, -207))
+    assert feed_point(path) == pytest.approx((85, -7))
     units = device.config.speed_units.split("/")[0]
     assert job.info.speed == from_unit(device.config.speed, units)
 
@@ -206,7 +206,7 @@ def test_pen_up_path_draws_the_feed():
     moves = move_path_of(path)
     end = moves.elementAt(moves.elementCount() - 1)
     assert end.isLineTo()
-    assert (end.x, end.y) == pytest.approx((80, -200))
+    assert (end.x, end.y) == pytest.approx((80, 0))
 
 
 def test_preview_refresh_does_not_grow_copies(quiet_job_str):

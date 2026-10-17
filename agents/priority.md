@@ -14,7 +14,7 @@ plan must get a plan on this list.
 | Pri | Plan | Status | Notes |
 | --- | --- | --- | --- |
 | P1 | Cut Selection | waiting | `agents/plans/cut-selection.md`. Human checkbox is still his. On 2026-10-17 he opened one of two text objects with Cut selection and only that object came in. |
-| P2 | Device path | waiting | `agents/plans/device-path.md`. Slice 2 is on master. Do not start slice 3. He asked for a design meeting on the preview orientation first. The dock can raise the window again. |
+| P2 | Device path | waiting | `agents/plans/device-path.md`. Do not start slice 3. With Swap X/Y on, Feed After ends at the bottom-right. The preview-orientation design meeting is still open. |
 
 Weedlines stays in `~/dev/me/weedlines`. It is not this queue.
 
