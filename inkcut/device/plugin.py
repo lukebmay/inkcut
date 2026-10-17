@@ -586,8 +586,8 @@ class Device(Model):
         if job.model is None:
             return None
         path = orient_path(job.model, self.config.swap_xy, self.output_scale())
-        if self.config.swap_xy and job.feed_to_end:
-            # Orient leaves this move on the top edge. It belongs on the bottom.
+        if self.config.swap_xy:
+            # The final pen-up is Return or Feed After. Orient leaves it on top.
             last = path.elementCount() - 1
             element = path.elementAt(last)
             if element.isMoveTo():

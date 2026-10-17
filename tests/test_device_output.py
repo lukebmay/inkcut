@@ -134,6 +134,28 @@ def test_swap_on_device_end():
     assert screen_box(artwork(path)) == pytest.approx((0, 0, 50, 200))
 
 
+def return_job(padding):
+    job = make_job(padding)
+    job.feed_to_end = False
+    job.model = job.create()
+    return job
+
+
+def test_swap_off_return_stays_at_the_origin():
+    path = make_device(swap_xy=False).output_path(return_job([0, 0, 0, 0]))
+    assert device_end(path) == pytest.approx((0, 0))
+    assert screen_box(artwork(path)) == pytest.approx((0, 0, 200, 50))
+
+
+def test_swap_on_return_ends_at_bottom_left():
+    path = make_device(swap_xy=True).output_path(return_job([0, 0, 0, 0]))
+    assert device_end(path) == pytest.approx((0, 0))
+    assert screen_box(artwork(path)) == pytest.approx((0, 0, 50, 200))
+    moves = move_path_of(path)
+    end = moves.elementAt(moves.elementCount() - 1)
+    assert (end.x, end.y) == pytest.approx((0, 0))
+
+
 def test_swap_on_padding_keeps_the_inset():
     path = make_device(swap_xy=True).output_path(make_job([10, 0, 0, 20]))
     assert screen_box(artwork(path)) == pytest.approx((20, 0, 50, 200))
