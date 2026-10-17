@@ -1,7 +1,7 @@
 # device-path — One path for the preview and the cutter
 
-**Status:** active
-**Updated:** 2026-10-16
+**Status:** waiting
+**Updated:** 2026-10-17
 
 ## Goal
 
@@ -51,6 +51,12 @@ can aim along the carriage.
       load. No cutter is required.
 
 ## Human
+
+- [ ] Say how the preview should sit when you face the front of the
+      D760. The picture and the knife stay on the same path.
+
+Why human-only: the sideways preview is the knife's frame. Which
+way that frame should face you is your call.
 
 - [ ] On the D760, with the usual profile (Swap X/Y on), cut a
       rectangle with Feed After set to a distance you can see. The
@@ -150,8 +156,20 @@ Test: `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/test_device_output.py t
 
 Result: 28 passed.
 
-Slice 3 is next: nine origin anchors. The default is today's origin.
-The Human checkbox stays open. He can cut the feed check now.
+The dock could not raise the window because Qt never set WM_CLASS.
+`application_factory` now names the application `inkcut` before the
+window exists. That fix is separate from this plan.
+
+Do not start slice 3. Luke saw the preview turned 90° clockwise and
+asked for a design meeting before any layout change. That turn is
+Swap X/Y: `rotate(90)`, origin parked at the bottom-left, Feed After
+traveling out the right of the artwork. It matches the knife. It
+does not match the D760 as he faces it, origin at the bottom-right
+and the vinyl moving top to bottom. A view change has to move the
+picture and the knife together. Do not add a preview-only rotation.
+
+Slice 3, when the meeting is done, is still nine origin anchors.
+The default is today's origin. The feed cut checkbox stays open.
 `architecture.md` Running code still says `Job.create` takes
 `swap_xy`. That paragraph is stale. Do not edit it until Luke says
 to. Slice 4 still waits for him to lock the feed-axis model.
