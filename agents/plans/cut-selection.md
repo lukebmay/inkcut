@@ -10,17 +10,17 @@ selected. The rest of the document stays out of the job.
 
 ## Acceptance
 
-- [ ] The extension passes SVG element ids (`id` attributes), not
+- [x] The extension passes SVG element ids (`id` attributes), not
       lxml `xml_path` keys.
-- [ ] `QtSvgDoc` keeps a node when its id was requested, or when the
+- [x] `QtSvgDoc` keeps a node when its id was requested, or when the
       node is inside a requested element. A selected group includes
       its descendants.
-- [ ] When the id list is non-empty and none of those ids are in the
+- [x] When the id list is non-empty and none of those ids are in the
       file, the job does not open the other objects. The operator
       gets an error instead of a full import.
-- [ ] A selection that contains text is converted without
+- [x] A selection that contains text is converted without
       `select-all` pulling in objects that were not selected.
-- [ ] A unit test opens a fixture SVG with two paths and one group
+- [x] A unit test opens a fixture SVG with two paths and one group
       and checks each of those cases. No Inkscape process is required
       for that test.
 
@@ -56,17 +56,37 @@ document. This plan does not change that action.
 
 ## Session
 
-Not started.
+Cut Selection sends element ids and opens only those objects.
+`plugins/inkscape/inkcut_cut.py` passes `list(self.svg.selected.ids)`
+on Inkscape 1.X. The 0.9 path still uses `self.selected` keys.
+`QtSvgDoc` matches ids with `element.get("id")`, including the root,
+and does not build an XPath from the id. A match keeps that element,
+its descendants, and its ancestors. A non-empty id list that matches
+nothing raises `ValueError` before geometry is parsed, so the other
+objects are not imported. A partial match keeps the ids that exist.
 
-Cause, checked against Inkscape 1.2.2's inkex and this tree:
+`plugins/inkscape/selection.py` holds the action string, the
+surviving-id filter, and the text check. A selection that contains
+text, including text inside a selected group, is converted with one
+`select-by-id` per id and no `select-all`. Ids that contain `;` or a
+newline are refused before Inkscape runs. After a successful
+conversion, `--nodes` receives the original ids that are still on an
+element, in the same order. An empty id list is not passed. If the
+selection has no text, the original ids are passed and Inkscape is
+not asked to convert. Open in Inkcut is unchanged and still converts
+the whole document. Both Inkscape `.inx` files list `selection.py` so
+that module is copied with the extensions.
 
-- `plugins/inkscape/inkcut_cut.py` lines 58–76 pass `nodes.keys()`.
-- `/usr/share/inkscape/extensions/inkex/elements/_selected.py`
-  stores `elem.xml_path` as the dict key and the real id in `.ids`.
-- `inkcut/core/svg.py` `QtSvgDoc.__init__` (about 728–742) and
-  `QtSvgG.parse` (about 669–676): empty `valid_nodes` disables the
-  filter.
-- `inkcut4inkscape.py` `convert_objects_to_paths` uses `select-all`.
+`QtSvgG.parse` skips an id that was not requested before it rejects
+text. Unselected text no longer aborts the job. Text that was
+selected, including text inside a selected group, still raises until
+the extension has converted it.
 
-Next step: a fixture test for the id filter, then the extension
-change. Do not start `device-path` in the same slice.
+`QT_QPA_PLATFORM=offscreen python3 -m pytest tests/test_svg.py tests/test_cut_selection.py -q`
+passed, 24 tests. Pytest cannot import `inkex`, so it does not load
+`inkcut_cut.py`. The id pass was read in that file:
+`list(self.svg.selected.ids)` on Inkscape 1.X. The installed
+extension files are symlinks into this tree, including
+`selection.py`, so the Inkscape menu uses this code after Inkscape
+is restarted. The Human checkbox is still open. Do not archive this
+plan until that check is done.
