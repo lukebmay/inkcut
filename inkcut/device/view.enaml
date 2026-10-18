@@ -25,6 +25,16 @@ from inkcut.preview.plot_view import PlotView
 from .plugin import DeviceConfig
 
 
+def _choice_label(value):
+    if value == "down":
+        return QApplication.translate("device", "Down")
+    if value == "left":
+        return QApplication.translate("device", "Left")
+    if value == "right":
+        return QApplication.translate("device", "Right")
+    return str(value)
+
+
 enamldef ConfigView(Container):
     attr model: Model
     Label:
@@ -71,15 +81,30 @@ enamldef DeviceConfigView(Container):
             title = QApplication.translate("device", "Output")
             Form:
                 Label:
+                    text = QApplication.translate("device", "Feed")
+                ObjectCombo:
+                    items = list(model.get_member('feed_direction').items)
+                    to_string = _choice_label
+                    selected := model.feed_direction
+                    tool_tip = QApplication.translate(
+                        "device",
+                        "Which way this cutter's roller advances the vinyl.")
+                Label:
+                    text = QApplication.translate("device", "Origin")
+                ObjectCombo:
+                    items = list(model.get_member('origin_side').items)
+                    to_string = _choice_label
+                    selected := model.origin_side
+                    tool_tip = QApplication.translate(
+                        "device",
+                        "Which side of that feed the origin is on.")
+                Label:
                     text = QApplication.translate("device", "Orientation")
                 Container:
                     constraints = [
-                        hbox(cbsxy, cbmx, cbmy, spacer),
-                        align('v_center', cbsxy, cbmx, cbmy)
+                        hbox(cbmx, cbmy, spacer),
+                        align('v_center', cbmx, cbmy)
                     ]
-                    CheckBox: cbsxy:
-                        text = QApplication.translate("device", "Swap X/Y")
-                        checked := model.swap_xy
                     CheckBox: cbmx:
                         text = QApplication.translate("device", "Mirror X")
                         checked := model.mirror_x

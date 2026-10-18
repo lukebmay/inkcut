@@ -14,7 +14,7 @@ plan must get a plan on this list.
 | Pri | Plan | Status | Notes |
 | --- | --- | --- | --- |
 | P1 | Cut Selection | waiting | `agents/plans/cut-selection.md`. Human checkbox is still his. On 2026-10-17 he opened one of two text objects with Cut selection and only that object came in. |
-| P2 | Device path | waiting | `agents/plans/device-path.md`. Luke accepted the still picture on 2026-10-18. Next is Approach step 3, the mounting, only when he asks. It replaces Swap X/Y and moves the knife. Nine anchors wait. Human checkboxes stay open. Do not open a pull request. |
+| P2 | Device path | waiting | `agents/plans/device-path.md`. Step 3 is in: Feed and Origin replace Swap X/Y. Next is Approach step 4, the nine anchors, only when he asks. Human checkboxes stay open. Do not open a pull request. |
 
 Weedlines stays in `~/dev/me/weedlines`. It is not this queue.
 

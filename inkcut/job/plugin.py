@@ -32,12 +32,13 @@ def _has_line(path):
     return False
 
 
-def _append_cut_layers(view_items, path, plot, head, swap_xy):
+def _append_cut_layers(view_items, path, plot, head, feed_direction, origin_side):
     """ Draw the cut. Return the start line, finish line, and marks.
 
     Those three are added after the material so the border does not cover them.
     """
-    middle, approach, finish, marks = cut_overlay(path, head, swap_xy)
+    middle, approach, finish, marks = cut_overlay(
+        path, head, feed_direction, origin_side)
     if _has_line(middle):
         view_items.append(dict(path=middle, pen=plot.pen_up))
     view_items.append(dict(path=path, pen=plot.pen_down))
@@ -230,11 +231,14 @@ class JobPlugin(Plugin):
 
         if device:
             scale = device.output_scale()
-            swap_xy = device.config.swap_xy
+            feed_direction = device.config.feed_direction
+            origin_side = device.config.origin_side
             if device.area:
                 view_items.append(
                     dict(
-                        path=orient_bed(device.area.path, swap_xy, scale),
+                        path=orient_bed(
+                            device.area.path, feed_direction, origin_side, scale
+                        ),
                         pen=plot.pen_device,
                         skip_autorange=True,
                     )
@@ -243,19 +247,23 @@ class JobPlugin(Plugin):
             if output is not None:
                 overlay.extend(_append_cut_layers(
                     view_items, output, plot,
-                    placed_origin(device, job), device.config.swap_xy,
+                    placed_origin(device, job), feed_direction, origin_side,
                 ))
             if job.material:
                 view_items.extend(
                     [
                         dict(
-                            path=orient_bed(job.material.path, swap_xy, scale),
+                            path=orient_bed(
+                                job.material.path, feed_direction, origin_side,
+                                scale,
+                            ),
                             pen=plot.pen_media,
                             skip_autorange=([0, job.size[0]], [0, job.size[1]]),
                         ),
                         dict(
                             path=orient_bed(
-                                job.material.padding_path, swap_xy, scale
+                                job.material.padding_path, feed_direction,
+                                origin_side, scale,
                             ),
                             pen=plot.pen_media_padding,
                             skip_autorange=True,
@@ -267,7 +275,7 @@ class JobPlugin(Plugin):
             t = preview_plugin.transform
             if job.model:
                 overlay.extend(_append_cut_layers(
-                    view_items, job.model, plot, (0.0, 0.0), False,
+                    view_items, job.model, plot, (0.0, 0.0), "down", "left",
                 ))
             if job.material:
                 view_items.extend(

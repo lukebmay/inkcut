@@ -36,11 +36,11 @@ def placed_origin(device, job):
     return (0.0, 0.0)
 
 
-def mounting_names(swap_xy):
-    """ Today's Swap on is the D760 picture: origin on the right, feed to the left. """
-    if swap_xy:
-        return "Right", "left"
-    return "Left", "down"
+def mounting_names(feed_direction, origin_side):
+    """ Caption from the origin side. The arrow is the feed direction. """
+    if origin_side == "right":
+        return "Right", feed_direction
+    return "Left", feed_direction
 
 
 def origin_caption(name):
@@ -263,7 +263,7 @@ class PreviewMarks(GraphicsObject):
         painter.restore()
 
 
-def cut_overlay(path, head, swap_xy):
+def cut_overlay(path, head, feed_direction, origin_side):
     """ Middle travel, approach, finish, and the marker item for one path. """
     approach, middle, finish = travel_parts(path, head)
     if finish is not None:
@@ -273,6 +273,6 @@ def cut_overlay(path, head, swap_xy):
         final = (end.x, end.y)
     else:
         final = head
-    origin_name, feed = mounting_names(swap_xy)
+    origin_name, feed = mounting_names(feed_direction, origin_side)
     marks = PreviewMarks(head, head, final, feed, origin_name)
     return middle, line_path(approach), line_path(finish), marks

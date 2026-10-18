@@ -7,7 +7,7 @@ from enaml.qt.QtGui import QPainterPath, QTransform
 
 from inkcut.core.svg import QtSvgDoc
 from inkcut.core.utils import from_unit
-from inkcut.device.plugin import Device, DeviceConfig, orient_bed
+from inkcut.device.plugin import Device, DeviceConfig, orient_bed, orient_path
 from inkcut.job.models import Job, Material, move_path_of
 from inkcut.job.plugin import JobPlugin
 
@@ -108,7 +108,12 @@ def test_oriented_path_matches_the_bed(swap_xy, scale, padding, art, feed, bed):
     art_box = screen_box(artwork(path))
     assert art_box == pytest.approx(art)
 
-    outline = orient_bed(job.material.path, swap_xy, device.output_scale())
+    outline = orient_bed(
+        job.material.path,
+        device.config.feed_direction,
+        device.config.origin_side,
+        device.output_scale(),
+    )
     bounds = outline.boundingRect()
     assert bounds.left() == pytest.approx(0)
     assert bounds.bottom() == pytest.approx(0)
@@ -258,3 +263,90 @@ def test_preview_refresh_does_not_grow_copies(quiet_job_str):
 
 def test_job_plugin_imports():
     assert callable(JobPlugin._refresh_preview)
+
+
+def test_default_mounting_is_down_left():
+    config = DeviceConfig()
+    assert config.feed_direction == "down"
+    assert config.origin_side == "left"
+    state = config.__getstate__()
+    assert state["feed_direction"] == "down"
+    assert state["origin_side"] == "left"
+    assert "swap_xy" not in state
+
+
+def test_saved_swap_true_loads_rotate_90():
+    config = DeviceConfig()
+    config.__setstate__({"swap_xy": True})
+    assert config.feed_direction == "left"
+    assert config.origin_side == "right"
+    path = Device(config=config).output_path(make_job([0, 0, 0, 0]))
+    assert feed_point(path) == pytest.approx((80, 0))
+    assert screen_box(artwork(path)) == pytest.approx((0, 0, 50, 200))
+
+
+def test_saved_swap_false_stays_down_left():
+    config = DeviceConfig()
+    config.__setstate__({"swap_xy": False})
+    assert config.feed_direction == "down"
+    assert config.origin_side == "left"
+
+
+def test_saved_swap_does_not_override_new_fields():
+    config = DeviceConfig()
+    config.__setstate__({
+        "swap_xy": True,
+        "feed_direction": "down",
+        "origin_side": "left",
+    })
+    assert config.feed_direction == "down"
+    assert config.origin_side == "left"
+
+
+def test_factory_swap_true_keeps_cameo_scale():
+    config = DeviceConfig(
+        swap_xy=True,
+        scale=[5.64, 5.64],
+        mirror_x=True,
+        mirror_y=True,
+    )
+    assert config.feed_direction == "left"
+    assert config.origin_side == "right"
+    assert list(config.scale) == pytest.approx([5.64, 5.64])
+    assert config.mirror_x is True
+    assert config.mirror_y is True
+
+
+def asymmetric_path():
+    path = QPainterPath()
+    path.moveTo(0, 0)
+    path.lineTo(100, 0)
+    path.lineTo(100, -10)
+    path.lineTo(0, -40)
+    path.closeSubpath()
+    path.moveTo(0, -70)
+    return path
+
+
+@pytest.mark.parametrize(
+    "feed_direction, origin_side, final, corner",
+    [
+        ("down", "left", (0, -70), (100, -10)),
+        ("down", "right", (0, -70), (0, -10)),
+        ("left", "right", (70, 0), (10, 0)),
+        ("left", "left", (70, 0), (10, -100)),
+    ],
+)
+def test_opposite_origin_mirrors_an_asymmetric_path(
+    feed_direction, origin_side, final, corner
+):
+    path = asymmetric_path()
+    oriented = orient_path(path, feed_direction, origin_side, (1, 1))
+    end = oriented.elementAt(oriented.elementCount() - 1)
+    assert end.isMoveTo()
+    assert (end.x, end.y) == pytest.approx(final)
+    bent = oriented.elementAt(2)
+    assert bent.isLineTo()
+    assert (bent.x, bent.y) == pytest.approx(corner)
+    source = path.elementAt(path.elementCount() - 1)
+    assert (source.x, source.y) == pytest.approx((0, -70))

@@ -20,37 +20,37 @@ can aim along the carriage.
 
 ## Acceptance
 
-- [ ] Each slice that moves the knife also moves the pre-cut preview
+- [x] Each slice that moves the knife also moves the pre-cut preview
       in that same slice. A slice that only corrects the picture
       does not move the knife.
-- [ ] Slice 1 draws the path `Device.init` already sends, including
+- [x] Slice 1 draws the path `Device.init` already sends, including
       today's Swap X/Y and today's feed. The protocol bytes do not
       change. The live bed uses that same path, not its private
       `rotate(90)` plus `scale(-1, 1)`.
-- [ ] Slice 2: `Job.create` no longer takes `swap_xy` or device
+- [x] Slice 2: `Job.create` no longer takes `swap_xy` or device
       scale. The document path includes padding, the return to
       origin, and Feed After. One device function orients that whole
       path. Saved Swap X/Y still means `QTransform.rotate(90)`,
       `(x, y) → (−y, x)`, so a D760 job that already looks right on
       the vinyl does not turn the other way.
-- [ ] With Swap X/Y off, a rectangle 200 by 50 (90 DPI px) and Feed
+- [x] With Swap X/Y off, a rectangle 200 by 50 (90 DPI px) and Feed
       After of 30 ends at device `(0, 80)` after the process Y-flip.
       With Swap X/Y on, that feed ends at the bottom-right, device
       `(80, 0)`: past the right edge by the feed distance, on the
       bottom edge. The artwork stays the `rotate(90)` picture.
-- [ ] With Swap X/Y on and Return to origin, that rectangle's final
+- [x] With Swap X/Y on and Return to origin, that rectangle's final
       pen-up ends at device `(0, 0)`, the bottom-left. The artwork
       box stays `(0, 0, 50, 200)`.
-- [ ] The next slice replaces Swap X/Y and the final-point patch
+- [x] The next slice replaces Swap X/Y and the final-point patch
       with a device feed direction and an origin side, left or
       right. Saved `swap_xy` true loads as the D760 mounting:
       artwork `rotate(90)`, Feed After at the bottom-right, Return
       at the bottom-left. Swap off is unchanged.
 - [ ] Nine anchors come after that mounting is the only orient.
       The default anchor is the corner that mounting already uses.
-- [ ] Protocol code is unchanged. It still converts 90 DPI px to
+- [x] Protocol code is unchanged. It still converts 90 DPI px to
       plotter units.
-- [ ] A unit test covers the rectangle endpoints and, once those
+- [x] A unit test covers the rectangle endpoints and, once those
       controls exist, the default origin and the saved `swap_xy`
       load. No cutter is required.
 
@@ -230,150 +230,73 @@ path.
 
 ## Session
 
-Luke said on 2026-10-18 that the still picture worked. The picture
-slice is committed and pushed to `origin` (`lukebmay/inkcut`). Do
-not start Approach step 3 until he asks. Do not tick Human
-checkboxes. Do not edit `architecture.md`. Do not send a job to the
-cutter, including `/dev/ttyUSB0`. Do not open a pull request. Luke
-opens any upstream PR himself. `inkcut/inkcut#442` was closed on
+Luke asked on 2026-10-18 to replace Swap X/Y with origin location
+and feed direction. This turn did Approach step 3 only. Do not
+start step 4, the nine anchors, until he asks. The default anchor
+must be the corner this mounting already uses, so an existing job
+does not jump.
+
+The Output page (`inkcut/device/view.enaml`) has Feed (`down` or
+`left`) and Origin (`left` or `right`). Mirror X and Mirror Y stay.
+The Swap X/Y checkbox is gone. `feed_to_end` and `feed_after` stay
+on the job.
+
+`DeviceConfig` has no `swap_xy` member. `__init__` and
+`__setstate__` pop that key. True, with neither new field present,
+loads as feed `left` and origin `right`: `QTransform.rotate(90)`,
+`(x, y) → (−y, x)`, Feed After at the bottom-right, Return at the
+bottom-left. False or absent stays feed `down`, origin `left`.
+Named fields win. `__getstate__` does not write `swap_xy`.
+
+Factory dicts in `inkcut/device/drivers/manifest.enaml` were not
+edited. Roland Stika SV-15, SV-12, and SV-8, and Silhouette Cameo 4
+still pass `swap_xy` true and get that mounting. Cameo also keeps
+scale `5.64` and both mirrors. The Summa D760 preset was not
+touched. Luke's saved profile still has the old key until the app
+saves; the loader maps it. Do not edit `~/.config/inkcut/`.
+
+Opposite origin (down + right, or left + left) mirrors across the
+feed axis, parks again, and seats the trailing moveTo on the origin
+edge. A rectangle's endpoints match the natural side. An asymmetric
+path flips. `tests/test_device_output.py` locks that and the
+rectangle contract. Do not weaken it. Do not restore the old feed
+at device `(0, 230)`.
+
+`job.model` is not mutated. The document feed stays `(0, -80)`.
+`init` does not call `create()`. `config.rotation` stays off the
+picture and the knife. `Device.process` keeps `scale(1, -1)`.
+Protocol files were not edited. The on-screen origin stays at the
+parked corner. A facing view that redraws it is a later change of
+picture and knife together.
+
+Do not tick the Human checkboxes. Do not send a job to the cutter,
+including `/dev/ttyUSB0`. Do not open a pull request. Luke opens
+any upstream PR himself. `inkcut/inkcut#442` was closed on
 2026-10-17 and branch `pr/d760-path` was deleted. Do not reopen it.
+Do not edit `architecture.md`. It still names Swap X/Y. That
+leftover is in `agents/conflicts.md`.
 
-Approach step 3 is the mounting. It replaces the Swap X/Y checkbox
-with two device facts, feed direction and origin side, and it moves
-the knife. The contract is below. Nine anchors are step 4 and wait
-until that mounting is the only orient.
+The blank-preview fix is in `inkcut/preview/plot_view.py`. Do not
+put `processEvents` or a pin that reads `axis.width()` or
+`maximumWidth()` back. The green and red travel lines stay the 1 px
+cosmetic stroke. Do not touch pen widths or
+`PainterPathPlotItem.updateData`. French and German `.ts` files
+were left alone. `lrelease` is not installed. New Output strings
+fall back to English.
 
-The three preview strings `Origin (Left)`, `Origin (Right)`, and
-`Feed` are still English in `inkcut/preview/markers.py`. French and
-German live in `inkcut/res/translations/*.ts` and the app loads the
-compiled `.qm`. `lrelease` is not installed here, so those files
-were left alone. The French `tool_tip` is the older preview text.
-English uses the new fallback in `inkcut/preview/view.enaml` when
-the translation is missing.
+Marks read feed direction and origin side. Down + left is labeled
+Origin (Left), arrow down. Left + right is labeled Origin (Right),
+arrow left. Changing Feed or Origin in the device dialog still
+waits for a save, or a job change, before the preview redraws.
 
-The blank-preview fix is in `inkcut/preview/plot_view.py`. A
-`fit_once` replace only clears and adds items. It does not fit and
-does not call `processEvents`. One `QTimer.singleShot(0)` carries a
-generation counter. An older timer does nothing and does not clear
-items. When the view is wider and taller than 1 px, the fit turns
-`autoExpandTextSpace` and `autoReduceTextSpace` off, sets
-`tickTextWidth` 30 and `tickTextHeight` 18, then `setWidth(None)`
-and `setHeight(None)` on the left and bottom axes, then
-`autoRange()` once. That disables auto-range. It is not called
-again. If the view is not that size yet, `sigResized` only re-arms
-the same timer and does not write the range. `fit_once` is still
-true only in `inkcut/preview/view.enaml`. The live plot still
-auto-ranges and its axes still grow. A tick string wider than that
-30 px column may clip. That clip is accepted.
+Tests on 2026-10-18, 74 passed:
 
-Do not put `processEvents` or a pin that reads `axis.width()` or
-`maximumWidth()` back. The 19:23 open nested `set_data` on that
-pump, cleared the items, and `autoRange` froze an empty scene. A
-0-wide axis also reserved 16777215 and left the view box no pixels.
+`QT_QPA_PLATFORM=offscreen python3 -m pytest tests/test_device_output.py tests/test_preview_markers.py tests/test_plotter_unit_scale.py -q`
 
-The green and red travel lines are the same 1 px cosmetic stroke as
-the blue pen-up, still opaque `#1F9D55` and `#E53935`. The old 2.6 px
-pen made pyqtgraph draw one diagonal of the bounding box, so the
-green line left the top-left of that box instead of the green dot.
-The line now leaves the dot and ends at the path's first point. On
-a swapped job that first point can still be the far corner of the
-turned art. Moving the knife's start is step 3, and it waits. The
-red finish mark is painted after the green start, including when
-both sit on the origin. Arrow, dots, and the red cross are unchanged.
+The Output view was constructed offscreen for a default config and
+for `DeviceConfig(swap_xy=True)`.
 
-The live device plot still auto-ranges, and its axes still follow
-the tick labels. Mouse wheel zoom and View all must still work
-after the slice above. The knife is unchanged. Do not touch
-markers, pen widths, or `PainterPathPlotItem.updateData`.
-
-The marks are drawn on today's device path. Swap off is labeled
-Origin (Left), and the feed arrow points down.
-Swap on is labeled Origin (Right), and the feed arrow points left.
-Those names sit on the current picture. They are not the new
-controls yet. The black dot is the origin. The blue arrow and the
-word Feed are the way the vinyl moves out. A green dot, half the
-origin dot, is where the head starts, and the first pen-up is
-green. A red cross of two rectangles is where the head finishes,
-and the last pen-up is red. When the head starts on the origin, the
-green dot is the center of the black dot.
-
-Labels sit near the origin and off the art. The left-feed row under
-the art is the origin word, then Feed, then a left-pointing arrow.
-Toggling Swap X/Y does not refresh the preview until the device
-dialog is saved, or the job changes. The live device plot is
-unchanged.
-
-Tests on 2026-10-18, 30 passed:
-
-`QT_QPA_PLATFORM=offscreen python3 -m pytest tests/test_preview_markers.py tests/test_device_output.py -q`
-
-`tests/test_device_output.py` is still the geometry contract. Do not
-weaken it. The new preview checks are the fitted range contains the
-art, the grab is not all white, the fit does not call
-`processEvents`, axis minimums are tens of pixels and never
-16777215, a second replace keeps the new items, `scaleBy` is not
-restored by a later event, and the live-plot axis still grows.
-
-On that later session, orchestrate step 3 with one implementer. Do
-not start step 4 in the same turn. Do not resume a finished
-subagent. Do not hold another design meeting. Frames is the model.
-
-Replace the Swap X/Y checkbox on the device Output page
-(`inkcut/device/view.enaml`) with two device facts: feed direction
-and origin side (left or right). One source of truth. Do not leave
-the checkbox beside the new controls. `feed_to_end` and
-`feed_after` stay on the job. Feed direction is not a job setting.
-Build Return and Feed After from that mounting inside the orient,
-on the whole path, strokes and pen-ups together. Then delete the
-`setElementPositionAt` y = 0 patch in `Device.output_path`.
-`orient_path`, `orient_bed`, `output_path`, the pre-cut preview,
-and the live bed (`inkcut/job/plugin.py` and `inkcut/device/plugin.py`)
-share that mounting. `Device.process` keeps `scale(1, -1)`.
-Protocol files stay.
-
-`tests/test_device_output.py` must stay green. Rectangle 200 by 50,
-feed 30, 90 DPI px. Device end is `(path_x, -path_y)`.
-
-- Saved `swap_xy` false, and the new default (origin on the left):
-  feed device `(0, 80)`, path point `(0, -80)`, art screen
-  `(0, 0, 200, 50)`. Return device `(0, 0)`, same art. Padding
-  `[10, 0, 0, 20]`: feed `(0, 100)`, art `(10, 20, 200, 50)`.
-- Saved `swap_xy` true loads as today's `rotate(90)` mounting. Do
-  not turn the artwork the other way. Feed device `(80, 0)`, path
-  point `(80, 0)`, art `(0, 0, 50, 200)`. Return device `(0, 0)`,
-  same art. Padding `[10, 0, 0, 20]`: feed `(100, 0)`, art
-  `(20, 0, 50, 200)`. Scale `(2, 1)` with that pad: feed
-  `(100, 0)`, art `(20, 0, 50, 400)`. Device origin `(5, 7)`
-  applies only when `feed_to_end`, after the mounting: feed path
-  point `(85, -7)`. Return is not origin-translated.
-- Factory presets that set `swap_xy` true must keep that geometry:
-  Roland Stika SV-15, SV-12, and SV-8, and Silhouette Cameo 4
-  (Cameo also scale `5.64` and both mirrors) in
-  `inkcut/device/drivers/manifest.enaml`. The Summa D760 factory
-  preset does not set `swap_xy`. Luke's saved profile does. Do not
-  change that preset's raw path.
-- `job.model` is not mutated. The document feed stays `(0, -80)`.
-  `init` does not call `create()`, so `auto_copies` do not grow.
-  `config.rotation` stays off both the picture and the knife. Do
-  not give `Device.transform` a preview-only rotation. Leave the
-  commented rotation widget commented.
-- Do not move the on-screen origin to the widget's bottom-right.
-  That would move the knife. A facing view that redraws the origin
-  is a later change of picture and knife together, and it needs a
-  test cut.
-
-The measurement paragraph above Frames that cites device `(0, 230)`
-is the feed from before the y = 0 patch. Do not restore it.
-Acceptance and the tests are the contract.
-
-Test: `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/test_device_output.py -q`
-
-Last run on this contract: 20 passed, at `7705c1c`. That commit is
-the Return bookmark. `44579bd` is Feed After after Luke cut it.
-`e2920a6` is the known-good cut from before either corner snap. He
-has not re-tested Return in Inkscape.
-
-The facing-view checkbox stays open until he says Frames is right.
-The feed-cut checkbox stays open. Neither blocks step 3.
-`architecture.md` Running code still says `Job.create` takes
-`swap_xy`. Leave that until he says to edit it.
+The facing-view checkbox stays open. The feed-cut checkbox stays
+open. Neither blocks a later step 4 once he asks. `44579bd` is Feed
+After after he cut it. `e2920a6` is the known-good cut from before
+either corner snap. He has not re-tested Return in Inkscape.
