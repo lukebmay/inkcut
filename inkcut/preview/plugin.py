@@ -13,6 +13,9 @@ import pyqtgraph as pg
 from atom.api import List, Instance, Enum, Bool, Range
 from enaml.qt import QtCore, QtGui
 from inkcut.core.api import Plugin, Model, unit_conversions, log
+from pyqtgraph.graphicsItems.GraphicsObject import GraphicsObject
+
+from .markers import START_GREEN, END_RED
 from .plot_view import PainterPathPlotItem
 
 
@@ -32,6 +35,8 @@ class PreviewModel(Model):
     pen_up = Instance(QPen)
     pen_offset = Instance(QPen)
     pen_down = Instance(QPen)
+    pen_start = Instance(QPen)
+    pen_end = Instance(QPen)
     pen_device = Instance(QPen)
 
     def _default_pen_media(self):
@@ -51,6 +56,13 @@ class PreviewModel(Model):
 
     def _default_pen_down(self):
         return pg.mkPen((128, 128, 128))
+
+    def _default_pen_start(self):
+        # Stay at pen_up width. A wider opaque pen draws the box diagonal.
+        return pg.mkPen(START_GREEN)
+
+    def _default_pen_end(self):
+        return pg.mkPen(END_RED)
 
     def init(self, view_items):
         default_items = []
@@ -108,11 +120,12 @@ class PreviewPlugin(Plugin):
             A list of kwargs to to pass to each plot item
 
         """
-        t = self.transform
-        view_items = [
-            PainterPathPlotItem(kwargs.pop('path'), **kwargs)
-            for kwargs in items
-        ]
+        view_items = []
+        for item in items:
+            if isinstance(item, GraphicsObject):
+                view_items.append(item)
+            else:
+                view_items.append(PainterPathPlotItem(item.pop('path'), **item))
         self.preview.plot = view_items
 
     def set_live_preview(self, *items):

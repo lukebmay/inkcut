@@ -12,13 +12,14 @@ Created on Jun 11, 2015
 """
 from atom.atom import set_default
 from atom.api import (
-    Callable, Tuple, Float, List, ContainerList, Bool, FloatRange, Str,
+    Callable, Tuple, Float, Int, List, ContainerList, Bool, FloatRange, Str,
     Dict, Typed, ForwardTyped, observe
 )
 from enaml.core.declarative import d_
 from enaml.qt.qt_application import QtApplication
 from enaml.qt.qt_control import QtControl
 from enaml.qt import QtGui
+from enaml.qt.QtCore import QTimer
 from enaml.widgets.control import Control, ProxyControl
 from pyqtgraph.widgets.PlotWidget import PlotWidget
 from pyqtgraph.graphicsItems.PlotCurveItem import PlotCurveItem
@@ -113,6 +114,9 @@ class PlotView(Control):
 
     antialiasing = d_(Bool(True))
     aspect_locked = d_(Bool(True))
+    range_padding = d_(Float(0.02))
+    # Fit when the picture is replaced, then leave the zoom alone.
+    fit_once = d_(Bool(False))
 
     grid = d_(Tuple(item=Bool(), default=(False, False)))
     grid_alpha = d_(FloatRange(low=0.0, high=1.0, value=0.5))
@@ -133,6 +137,10 @@ class QtPlotView(QtControl, ProxyPlotView):
     widget = Typed(PlotWidget)
     _views = List()
     _colors = List(default=['r', 'g', 'b'])
+    # Bumps when the picture is replaced so a stale fit cannot clear it.
+    _fit_token = Int(0)
+    _fit_waiter = Callable()
+    _fit_callback = Callable()
 
     def create_widget(self):
         self.widget = PlotWidget(self.parent_widget(), background='w')
@@ -141,12 +149,14 @@ class QtPlotView(QtControl, ProxyPlotView):
         super(QtPlotView, self).init_widget()
         d = self.declaration
         #self.widget.setSizePolicy(QSizePolicy.Expanding,QSizePolicy.Expanding)
-        self.set_data(d.data)
+        # Scale and aspect before the picture, so the one fit is final.
         self.set_antialiasing(d.antialiasing)
         self.set_aspect_locked(d.aspect_locked)
+        self.widget.getViewBox().setDefaultPadding(d.range_padding)
         self.set_axis_scales(d.axis_scales)
         self.set_labels(d.labels)
         self.widget.showGrid(d.grid[0], d.grid[1], d.grid_alpha)
+        self.set_data(d.data)
 
         d.setup(self.widget)
 
@@ -182,18 +192,91 @@ class QtPlotView(QtControl, ProxyPlotView):
     def set_data(self, data):
         self.widget.clear()
         if not data:
+            self._cancel_fit()
             return
 
         if isinstance(data, (list, tuple)) and \
                 isinstance(data[0], GraphicsObject):
             self._set_graphic_items(data)
         else:
+            self._cancel_fit()
             self._set_numeric_data(data)
+
+    def _cancel_fit(self):
+        self._fit_token += 1
+        self._drop_fit_waiter()
+        self._fit_callback = None
+
+    def _drop_fit_waiter(self):
+        waiter = self._fit_waiter
+        self._fit_waiter = None
+        if waiter is None or self.widget is None:
+            return
+        try:
+            self.widget.getViewBox().sigResized.disconnect(waiter)
+        except TypeError:
+            pass
+
+    def _arm_fit(self):
+        # After this replace returns. Fitting here re-enters set_data.
+        self._drop_fit_waiter()
+        self._fit_token += 1
+        token = self._fit_token
+
+        def _fire():
+            self._finish_fit(token)
+
+        self._fit_callback = _fire
+        QTimer.singleShot(0, _fire)
+
+    def _finish_fit(self, token):
+        if token != self._fit_token or self.widget is None:
+            return
+        view = self.widget.getViewBox()
+        if view.width() <= 1 or view.height() <= 1:
+            self._wait_for_pixels(view)
+            return
+        self._reserve_tick_space()
+        if token != self._fit_token:
+            return
+        view.autoRange()
+
+    def _wait_for_pixels(self, view):
+        def _resized(*_args):
+            self._drop_fit_waiter()
+            self._arm_fit()
+
+        self._fit_waiter = _resized
+        view.sigResized.connect(_resized)
+
+    def _reserve_tick_space(self):
+        # Fixed tick columns. A measured width of 0 would reserve QWIDGETSIZE_MAX.
+        plot = self.widget.plotItem
+        left = plot.getAxis('left')
+        bottom = plot.getAxis('bottom')
+        for axis in (left, bottom):
+            if axis is None:
+                continue
+            axis.setStyle(
+                autoExpandTextSpace=False,
+                autoReduceTextSpace=False,
+                tickTextWidth=30,
+                tickTextHeight=18,
+            )
+        if left is not None:
+            left.setWidth(None)
+        if bottom is not None:
+            bottom.setHeight(None)
 
     def _set_graphic_items(self, items):
         self.widget.clear()
         for item in items:
             self.widget.addItem(item)
+        if self.declaration.fit_once and items:
+            self._arm_fit()
+            return
+        if self.declaration.fit_once:
+            self._cancel_fit()
 
     def _set_numeric_data(self, data):
         self.widget.plotItem.clear()

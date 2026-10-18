@@ -25,9 +25,11 @@ qtool_tip = QApplication.translate("preview", "tool_tip")
 if qtool_tip == 'tool_tip':
 
     qtool_tip = textwrap.dedent("""
-                The red dashed border is the device's x-y plane.
-                The solid black border is the material. The dashed black border is
-                the available area for use. The blue lines is the movement path.
+                The red dashed border is the device. The solid gray border is the
+                material, and the dashed gray border is the usable area.
+                Blue lines are travel. Green is where the head starts and its
+                first move. Red is where the head finishes. The black dot is the
+                origin. The blue arrow is the way the vinyl feeds out.
                 """).strip()
 
 
@@ -75,6 +77,8 @@ enamldef PreviewDockItem(DockItem):
             tool_tip = qtool_tip
             minimum_size = (360, None)
             data := preview.plot
+            range_padding = 0.28
+            fit_once = True
             grid << (plugin.show_grid_x, plugin.show_grid_y)
             grid_alpha << plugin.grid_alpha/100.0
             axis_scales << {

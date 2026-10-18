@@ -1,7 +1,7 @@
 # device-path — One path for the preview and the cutter
 
-**Status:** active
-**Updated:** 2026-10-17
+**Status:** waiting
+**Updated:** 2026-10-18
 
 ## Goal
 
@@ -230,17 +230,93 @@ path.
 
 ## Session
 
-Next session implements Approach step 3 only. Luke asked for that
-on 2026-10-17. The open Human checkboxes stay open and do not block
-this slice. Do not tick them. Do not edit `architecture.md`. Do not
-send a job to the cutter, including `/dev/ttyUSB0`. Do not open a
-pull request. Luke opens any upstream PR himself.
-`inkcut/inkcut#442` was closed on 2026-10-17 and branch
-`pr/d760-path` was deleted. Do not reopen it.
+Luke said on 2026-10-18 that the still picture worked. The picture
+slice is committed and pushed to `origin` (`lukebmay/inkcut`). Do
+not start Approach step 3 until he asks. Do not tick Human
+checkboxes. Do not edit `architecture.md`. Do not send a job to the
+cutter, including `/dev/ttyUSB0`. Do not open a pull request. Luke
+opens any upstream PR himself. `inkcut/inkcut#442` was closed on
+2026-10-17 and branch `pr/d760-path` was deleted. Do not reopen it.
 
-On Continue, orchestrate this slice with one implementer. Do not
-start step 4 in the same turn. Do not resume a finished subagent.
-Do not hold another design meeting. Frames is the model.
+Approach step 3 is the mounting. It replaces the Swap X/Y checkbox
+with two device facts, feed direction and origin side, and it moves
+the knife. The contract is below. Nine anchors are step 4 and wait
+until that mounting is the only orient.
+
+The three preview strings `Origin (Left)`, `Origin (Right)`, and
+`Feed` are still English in `inkcut/preview/markers.py`. French and
+German live in `inkcut/res/translations/*.ts` and the app loads the
+compiled `.qm`. `lrelease` is not installed here, so those files
+were left alone. The French `tool_tip` is the older preview text.
+English uses the new fallback in `inkcut/preview/view.enaml` when
+the translation is missing.
+
+The blank-preview fix is in `inkcut/preview/plot_view.py`. A
+`fit_once` replace only clears and adds items. It does not fit and
+does not call `processEvents`. One `QTimer.singleShot(0)` carries a
+generation counter. An older timer does nothing and does not clear
+items. When the view is wider and taller than 1 px, the fit turns
+`autoExpandTextSpace` and `autoReduceTextSpace` off, sets
+`tickTextWidth` 30 and `tickTextHeight` 18, then `setWidth(None)`
+and `setHeight(None)` on the left and bottom axes, then
+`autoRange()` once. That disables auto-range. It is not called
+again. If the view is not that size yet, `sigResized` only re-arms
+the same timer and does not write the range. `fit_once` is still
+true only in `inkcut/preview/view.enaml`. The live plot still
+auto-ranges and its axes still grow. A tick string wider than that
+30 px column may clip. That clip is accepted.
+
+Do not put `processEvents` or a pin that reads `axis.width()` or
+`maximumWidth()` back. The 19:23 open nested `set_data` on that
+pump, cleared the items, and `autoRange` froze an empty scene. A
+0-wide axis also reserved 16777215 and left the view box no pixels.
+
+The green and red travel lines are the same 1 px cosmetic stroke as
+the blue pen-up, still opaque `#1F9D55` and `#E53935`. The old 2.6 px
+pen made pyqtgraph draw one diagonal of the bounding box, so the
+green line left the top-left of that box instead of the green dot.
+The line now leaves the dot and ends at the path's first point. On
+a swapped job that first point can still be the far corner of the
+turned art. Moving the knife's start is step 3, and it waits. The
+red finish mark is painted after the green start, including when
+both sit on the origin. Arrow, dots, and the red cross are unchanged.
+
+The live device plot still auto-ranges, and its axes still follow
+the tick labels. Mouse wheel zoom and View all must still work
+after the slice above. The knife is unchanged. Do not touch
+markers, pen widths, or `PainterPathPlotItem.updateData`.
+
+The marks are drawn on today's device path. Swap off is labeled
+Origin (Left), and the feed arrow points down.
+Swap on is labeled Origin (Right), and the feed arrow points left.
+Those names sit on the current picture. They are not the new
+controls yet. The black dot is the origin. The blue arrow and the
+word Feed are the way the vinyl moves out. A green dot, half the
+origin dot, is where the head starts, and the first pen-up is
+green. A red cross of two rectangles is where the head finishes,
+and the last pen-up is red. When the head starts on the origin, the
+green dot is the center of the black dot.
+
+Labels sit near the origin and off the art. The left-feed row under
+the art is the origin word, then Feed, then a left-pointing arrow.
+Toggling Swap X/Y does not refresh the preview until the device
+dialog is saved, or the job changes. The live device plot is
+unchanged.
+
+Tests on 2026-10-18, 30 passed:
+
+`QT_QPA_PLATFORM=offscreen python3 -m pytest tests/test_preview_markers.py tests/test_device_output.py -q`
+
+`tests/test_device_output.py` is still the geometry contract. Do not
+weaken it. The new preview checks are the fitted range contains the
+art, the grab is not all white, the fit does not call
+`processEvents`, axis minimums are tens of pixels and never
+16777215, a second replace keeps the new items, `scaleBy` is not
+restored by a later event, and the live-plot axis still grows.
+
+On that later session, orchestrate step 3 with one implementer. Do
+not start step 4 in the same turn. Do not resume a finished
+subagent. Do not hold another design meeting. Frames is the model.
 
 Replace the Swap X/Y checkbox on the device Output page
 (`inkcut/device/view.enaml`) with two device facts: feed direction

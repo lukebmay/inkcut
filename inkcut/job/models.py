@@ -73,6 +73,49 @@ def move_path_of(model):
     return path
 
 
+def _same_point(a, b):
+    return abs(a[0] - b[0]) <= 1e-6 and abs(a[1] - b[1]) <= 1e-6
+
+
+def travel_parts(model, head):
+    """ Split pen-up travel into the approach, the later hops, and the finish.
+
+    The head begins at `head`, which is not an element. The first moveTo is
+    the first cutting location. The final moveTo is Feed After or Return.
+    """
+    middle = QPainterPath()
+    count = 0 if model is None else model.elementCount()
+    if count == 0:
+        return None, middle, None
+
+    def point_at(index):
+        element = model.elementAt(index)
+        return (element.x, element.y)
+
+    first = point_at(0)
+    approach = None if _same_point(head, first) else (head, first)
+
+    finish = None
+    end = count
+    if count >= 2 and model.elementAt(count - 1).isMoveTo():
+        previous = point_at(count - 2)
+        final = point_at(count - 1)
+        if not _same_point(previous, final):
+            finish = (previous, final)
+        end = count - 1
+
+    for index in range(end):
+        element = model.elementAt(index)
+        if element.isMoveTo():
+            if index == 0:
+                middle.moveTo(element.x, element.y)
+            else:
+                middle.lineTo(element.x, element.y)
+        else:
+            middle.moveTo(element.x, element.y)
+    return approach, middle, finish
+
+
 class JobError(Exception):
     pass
 

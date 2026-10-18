@@ -16,12 +16,40 @@ from atom.api import Instance, Enum, List, Str, Int, Float, observe, Bool
 from inkcut.core.api import Plugin, unit_conversions, log
 
 from inkcut.device.plugin import orient_bed
+from inkcut.preview.markers import cut_overlay, placed_origin
 
-from .models import Job, JobError, Material, move_path_of
+from .models import Job, JobError, Material
 
 with enaml.imports():
     from enaml.workbench.ui.workbench_menus import WorkbenchMenu
     from .menu import RecentDocumentsMenu
+
+
+def _has_line(path):
+    for index in range(path.elementCount()):
+        if path.elementAt(index).isLineTo():
+            return True
+    return False
+
+
+def _append_cut_layers(view_items, path, plot, head, swap_xy):
+    """ Draw the cut. Return the start line, finish line, and marks.
+
+    Those three are added after the material so the border does not cover them.
+    """
+    middle, approach, finish, marks = cut_overlay(path, head, swap_xy)
+    if _has_line(middle):
+        view_items.append(dict(path=middle, pen=plot.pen_up))
+    view_items.append(dict(path=path, pen=plot.pen_down))
+    start = dict(path=approach, pen=plot.pen_start) if _has_line(approach) else None
+    end = dict(path=finish, pen=plot.pen_end) if _has_line(finish) else None
+    return start, end, marks
+
+
+def _extend_overlay(view_items, overlay):
+    for item in overlay:
+        if item is not None:
+            view_items.append(item)
 
 
 class JobPlugin(Plugin):
@@ -190,6 +218,7 @@ class JobPlugin(Plugin):
         """Redraw the preview on the screen"""
         log.info(change)
         view_items = []
+        overlay = []
 
         preview_plugin = self.workbench.get_plugin("inkcut.preview")
         job = self.job
@@ -212,12 +241,10 @@ class JobPlugin(Plugin):
                 )
             output = device.preview_output_path(job)
             if output is not None:
-                view_items.extend(
-                    [
-                        dict(path=move_path_of(output), pen=plot.pen_up),
-                        dict(path=output, pen=plot.pen_down),
-                    ]
-                )
+                overlay.extend(_append_cut_layers(
+                    view_items, output, plot,
+                    placed_origin(device, job), device.config.swap_xy,
+                ))
             if job.material:
                 view_items.extend(
                     [
@@ -239,12 +266,9 @@ class JobPlugin(Plugin):
             # No device yet: draw the job model as it stands.
             t = preview_plugin.transform
             if job.model:
-                view_items.extend(
-                    [
-                        dict(path=job.move_path, pen=plot.pen_up),
-                        dict(path=job.cut_path, pen=plot.pen_down),
-                    ]
-                )
+                overlay.extend(_append_cut_layers(
+                    view_items, job.model, plot, (0.0, 0.0), False,
+                ))
             if job.material:
                 view_items.extend(
                     [
@@ -260,6 +284,8 @@ class JobPlugin(Plugin):
                         ),
                     ]
                 )
+
+        _extend_overlay(view_items, overlay)
 
         #: Update the plot
         preview_plugin.set_preview(*view_items)
