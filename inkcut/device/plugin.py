@@ -262,6 +262,24 @@ class DeviceFilter(Model):
         return polypath
 
 
+def _origin_from_legacy(state):
+    # swap_xy and feed_direction are not stored. Illegal pairs become left.
+    state = dict(state)
+    has_origin = 'origin_side' in state
+    has_feed = 'feed_direction' in state
+    origin = state.get('origin_side')
+    feed = state.pop('feed_direction', None)
+    swap_xy = state.pop('swap_xy', False)
+    if has_origin and has_feed:
+        if (origin, feed) not in (('left', 'down'), ('right', 'left')):
+            state['origin_side'] = 'left'
+    elif has_feed:
+        state['origin_side'] = 'right' if feed == 'left' else 'left'
+    elif not has_origin and swap_xy:
+        state['origin_side'] = 'right'
+    return state
+
+
 class DeviceConfig(Model):
     """ The default device configuration. Custom devices may want to subclass
     this.
@@ -289,10 +307,7 @@ class DeviceConfig(Model):
     #: Final output rotation
     rotation = Enum(0, 90, -90).tag(config=True)
 
-    #: Which way the roller advances the vinyl, in the picture.
-    feed_direction = Enum('down', 'left').tag(config=True)
-
-    #: Which side of that feed the origin is on.
+    #: Origin left feeds down. Origin right feeds left.
     origin_side = Enum('left', 'right').tag(config=True)
     mirror_y = Bool().tag(config=True)
     mirror_x = Bool().tag(config=True)
@@ -330,24 +345,17 @@ class DeviceConfig(Model):
     commands_disconnect = Str().tag(config=True)
 
     def __init__(self, *args, **kwargs):
-        # swap_xy true means feed left and origin right. Named fields win.
-        swap_xy = kwargs.pop('swap_xy', False)
-        if (swap_xy and 'feed_direction' not in kwargs
-                and 'origin_side' not in kwargs):
-            kwargs['feed_direction'] = 'left'
-            kwargs['origin_side'] = 'right'
-        super(DeviceConfig, self).__init__(*args, **kwargs)
+        super(DeviceConfig, self).__init__(
+            *args, **_origin_from_legacy(kwargs))
 
     def __setstate__(self, state):
-        # swap_xy true means feed left and origin right. Named fields win.
-        state = dict(state)
-        swap_xy = state.pop('swap_xy', False)
-        legacy = (bool(swap_xy) and 'feed_direction' not in state
-                  and 'origin_side' not in state)
-        super(DeviceConfig, self).__setstate__(state)
-        if legacy:
-            self.feed_direction = 'left'
-            self.origin_side = 'right'
+        super(DeviceConfig, self).__setstate__(_origin_from_legacy(state))
+
+    def __getstate__(self):
+        state = super(DeviceConfig, self).__getstate__()
+        state.pop('swap_xy', None)
+        state.pop('feed_direction', None)
+        return state
 
     def _default_step_time(self):
         """ Determine the step time based on the device speed setting
@@ -378,52 +386,45 @@ def _park(path):
     return QtGui.QTransform.fromTranslate(-left, -bottom).map(path)
 
 
-def _seat_pen_up(path, feed_direction, to_origin_x):
+def feed_for_origin(origin_side):
+    if origin_side == 'right':
+        return 'left'
+    return 'down'
+
+
+def _seat_pen_up(path):
+    # rotate(90) plus the park leaves the pen-up on the far edge.
     last = path.elementCount() - 1
     if last < 0:
         return
     element = path.elementAt(last)
     if not element.isMoveTo():
         return
-    if feed_direction == 'left':
-        # Document pen-up sits on the origin side; rotate(90) plus the park leaves it on the far edge.
-        path.setElementPositionAt(last, element.x, 0.0)
-    elif to_origin_x:
-        path.setElementPositionAt(last, 0.0, element.y)
+    path.setElementPositionAt(last, element.x, 0.0)
 
 
-def _opposite_origin(feed_direction, origin_side):
-    return ((feed_direction == 'down' and origin_side == 'right')
-            or (feed_direction == 'left' and origin_side == 'left'))
-
-
-def orient_path(path, feed_direction, origin_side, scale):
+def orient_path(path, origin_side, scale):
     """ Scale before the turn so each axis keeps its factor. Park includes the origin.
     """
     oriented = QtGui.QTransform().map(path)
     if scale:
         oriented = QtGui.QTransform.fromScale(scale[0], scale[1]).map(oriented)
-    if feed_direction == 'left':
+    feed_left = feed_for_origin(origin_side) == 'left'
+    if feed_left:
         rot = QtGui.QTransform()
         rot.rotate(90)
         oriented = rot.map(oriented)
     oriented = _park(oriented)
-    _seat_pen_up(oriented, feed_direction, False)
-    if _opposite_origin(feed_direction, origin_side):
-        if feed_direction == 'down':
-            oriented = QtGui.QTransform.fromScale(-1, 1).map(oriented)
-        else:
-            oriented = QtGui.QTransform.fromScale(1, -1).map(oriented)
-        oriented = _park(oriented)
-        _seat_pen_up(oriented, feed_direction, True)
+    if feed_left:
+        _seat_pen_up(oriented)
     return oriented
 
 
-def orient_bed(path, feed_direction, origin_side, scale):
+def orient_bed(path, origin_side, scale):
     """ Bed outline in the oriented path frame. Rects are stored y-down.
     """
     framed = QtGui.QTransform.fromScale(1, -1).map(path)
-    return orient_path(framed, feed_direction, origin_side, scale)
+    return orient_path(framed, origin_side, scale)
 
 
 class Device(Model):
@@ -641,8 +642,7 @@ class Device(Model):
             return None
         config = self.config
         path = orient_path(
-            job.model, config.feed_direction, config.origin_side,
-            self.output_scale())
+            job.model, config.origin_side, self.output_scale())
         if job.feed_to_end:
             x, y, z = self.origin
             path.translate(x, -y)
@@ -1366,13 +1366,11 @@ class DevicePlugin(Plugin):
         device = self.device
         job = device.job
         scale = device.output_scale()
-        feed_direction = device.config.feed_direction
         origin_side = device.config.origin_side
 
         if device and device.area:
             view_items.append(
-                dict(path=orient_bed(
-                        device.area.path, feed_direction, origin_side, scale),
+                dict(path=orient_bed(device.area.path, origin_side, scale),
                      pen=plot.pen_device,
                      skip_autorange=True)
             )
@@ -1380,13 +1378,11 @@ class DevicePlugin(Plugin):
         if job and job.material:
             # Also observe any change to job.media and job.device
             view_items.extend([
-                dict(path=orient_bed(
-                        job.material.path, feed_direction, origin_side, scale),
+                dict(path=orient_bed(job.material.path, origin_side, scale),
                      pen=plot.pen_media,
                      skip_autorange=True),
                 dict(path=orient_bed(
-                        job.material.padding_path, feed_direction, origin_side,
-                        scale),
+                        job.material.padding_path, origin_side, scale),
                      pen=plot.pen_media_padding, skip_autorange=True)
             ])
 

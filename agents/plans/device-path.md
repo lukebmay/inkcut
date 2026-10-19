@@ -1,7 +1,7 @@
 # device-path — One path for the preview and the cutter
 
 **Status:** waiting
-**Updated:** 2026-10-18
+**Updated:** 2026-10-19
 
 ## Goal
 
@@ -11,12 +11,15 @@ still leaves the knife past the same edge of the artwork it leaves
 past when that mounting is off. On the Summa D760 that edge is the
 one that advances the vinyl.
 
-The operator places the job with an origin location and a device
-feed axis. Those two replace the Swap X/Y checkbox. Origin location
-is nine anchors, as in CSS: top, middle, or bottom, and left,
-center, or right. The feed axis is which way that cutter's roller
-advances. It is a device fact, chosen once, not a direction the job
-can aim along the carriage.
+The operator places the job from the cutter's mounting. This pass
+stores one origin side and offers two radios. Origin left feeds
+down. Origin right feeds left. Those replace the Swap X/Y checkbox.
+The graph keeps its origin at the bottom-left, so origin left with
+feed left, and origin right with feed down, belong to the later
+coordinate change. Nine anchors, as in CSS (top, middle, or bottom,
+and left, center, or right), wait until he asks. The feed axis is
+which way that cutter's roller advances. It is a device fact,
+chosen once, not a direction the job can aim along the carriage.
 
 ## Acceptance
 
@@ -41,11 +44,14 @@ can aim along the carriage.
 - [x] With Swap X/Y on and Return to origin, that rectangle's final
       pen-up ends at device `(0, 0)`, the bottom-left. The artwork
       box stays `(0, 0, 50, 200)`.
-- [x] The next slice replaces Swap X/Y and the final-point patch
-      with a device feed direction and an origin side, left or
-      right. Saved `swap_xy` true loads as the D760 mounting:
+- [x] The mounting slice replaces Swap X/Y and the final-point
+      patch with two radios: Origin left (feed down), the default,
+      and Origin right (feed left). One stored `origin_side`
+      derives the feed. Saved `swap_xy` true loads as Origin right:
       artwork `rotate(90)`, Feed After at the bottom-right, Return
-      at the bottom-left. Swap off is unchanged.
+      at the bottom-left. Origin left is the old Swap-off path. A
+      saved origin left with feed left, or origin right with feed
+      down, loads as origin left.
 - [ ] Nine anchors come after that mounting is the only orient.
       The default anchor is the corner that mounting already uses.
 - [x] Protocol code is unchanged. It still converts 90 DPI px to
@@ -62,10 +68,10 @@ can aim along the carriage.
 Why human-only: the sideways preview is the knife's frame. Which
 way that frame should face you is your call.
 
-- [ ] On the D760, with the usual profile (Swap X/Y on), cut a
-      rectangle with Feed After set to a distance you can see. The
-      vinyl should advance past the piece. The carriage should not
-      travel off along the other axis instead.
+- [ ] On the D760, with the usual profile (Origin right, feed
+      left), cut a rectangle with Feed After set to a distance you
+      can see. The vinyl should advance past the piece. The
+      carriage should not travel off along the other axis instead.
 
 Why human-only: only the cutter shows which plotter axis is the
 roller.
@@ -98,13 +104,14 @@ hand-written axis remix (`px, py = -py, -px`) that does not match
    document path before orientation. Device filters stay in
    `process`, after the Y-flip.
 3. **Mounting.** Replace Swap X/Y, and delete the final-point
-   patch, with one device feed direction and an origin side (left
-   or right). A saved `swap_xy` true loads as the D760 mounting
-   already cut: `rotate(90)` artwork, Feed After at the
-   bottom-right, Return at the bottom-left. Feed After and Return
-   are defined from that mounting, not by editing one point after
-   the rotation. Job rotation stays how a single design sits on
-   the sheet. It is not a second mounting.
+   patch, with two radios on one stored origin side. Origin left
+   feeds down and does not rotate. Origin right feeds left:
+   `rotate(90)` artwork, Feed After at the bottom-right, Return at
+   the bottom-left. A saved `swap_xy` true loads as Origin right.
+   Origin left with feed left, and origin right with feed down,
+   load as origin left. Feed After and Return come from that
+   mounting. Job rotation stays how a single design sits on the
+   sheet. It is not a second mounting.
 4. **Anchors.** Add the nine anchors only after that mounting is
    the only orient. The default is the corner the mounting already
    uses, so an existing job does not jump. Placement happens on
@@ -162,39 +169,35 @@ cutter is mounted. The trailing point is only the last pen-up.
 
 The device frame is `orient_path`, then `process`'s `scale(1, -1)`.
 Scale, with mirror folded in, is calibration and is applied before
-the mounting turn, so each design axis keeps its factor. Swap X/Y
-is the author's mounting switch: `QTransform.rotate(90)`,
-`(x, y) → (−y, x)`, on the whole path. The path is then parked so
+the mounting turn, so each design axis keeps its factor. Origin
+right is that turn: `QTransform.rotate(90)`, `(x, y) → (−y, x)`,
+on the whole path. Origin left does not rotate. The path is then
+parked so
 the bounds include `(0, 0)` and sit in negative y for the process
 flip. After that flip the protocol sees y up and positive
 distances from the parked corner. The protocol still converts 90 DPI
 px to plotter units. It does not learn a feed direction.
 
-With Swap off, the head returns to the bottom-left and Feed After
+Origin left returns the head to the bottom-left. Feed After
 finishes at the top-left. That is a quadrant-I bed: positive X to
 the right, positive Y up.
 
-With Swap on, the artwork turns 90° clockwise in the preview. A
+Origin right turns the artwork 90° clockwise in the preview. A
 wide design stands up. That turned artwork is the path the D760
-just cut, and it stays. The final pen-up is the part that was
-wrong. Rotation plus the park leaves it on the top edge of the
-turned picture. Return showed at the top-left. Feed After showed
-past the right edge and on the top.
-
-The patch, in `output_path`, runs only when Swap X/Y is on. It
-keeps that final move's x and sets its y to 0, which is the bottom
-of the parked frame. Feed After already had its x past the right
+cuts. Rotation plus the park leaves the trailing pen-up on the top
+edge of the turned picture. The mounting then seats that moveTo on
+y = 0 and keeps its x. Feed After already had its x past the right
 edge, so the head ends at the bottom-right. Return already had its
 x on the origin side, so the head ends at the bottom-left. Strokes
-are not moved. Preview and the wire both use `output_path`, so they
-get the same point. This is a patch on one point. It is not the
-mounting. Delete it when the mounting itself parks Return and Feed
-After.
+are not moved. Preview and the wire both use `output_path`. The
+old one-point patch in `output_path` is gone. The seat lives in
+`orient_path` for Origin right only.
 
 The D760, as Luke faces it, is a different side of that frame. He
 stands at the front, where the controls are. The origin he uses is
 the bottom-right of the bed. The vinyl feeds from top to bottom,
-toward him. Swap X/Y is how that mounting is stored today. In
+toward him. Origin right (feed left) is how that mounting is
+stored. A saved Swap X/Y true still loads as that radio. In
 Inkcut's bottom-left picture the feed runs right to left, which is
 the same relative motion as the knife traveling out to the right
 for Feed After. The machine still counts positive distances from
@@ -205,20 +208,22 @@ on the left.
 The proper mounting is still one device transform of the whole
 path.
 
-- Feed direction is which way the roller advances the material. It
-  is set once, on the device. It replaces Swap X/Y. A saved
-  `swap_xy` true loads as the mounting that already cuts the D760
-  artwork: today's `rotate(90)` of the document path. Feed After
+- The mounting is one stored origin side. Origin left feeds down
+  and leaves the document path unrotated. Origin right feeds left
+  and is the `rotate(90)` of the document path. It replaces Swap
+  X/Y. A saved `swap_xy` true loads as Origin right. Feed After
   travels opposite the vinyl, by `feed_after`, and stays on the
   origin's side of the other axis. Return is the origin of that
   same frame.
-- Origin side is left or right, relative to that feed direction.
-  The default stays the left, today's bottom-left, so an existing
-  job does not jump. The D760 chooses the right. Both sides use
-  positive machine coordinates.
-- Nine anchors can follow, once those two sides are the only
-  orient. They place a point of the artwork on a point of the
-  material. They are not a second feed direction.
+- The graph origin stays at the parked bottom-left. Origin right
+  turns the mounting so the physical right-hand origin and the
+  leftward feed still start at path `(0, 0)`. Origin left with a
+  leftward feed, and origin right with a downward feed, are the
+  later coordinate change. They load as origin left. Both offered
+  mountings use positive machine coordinates.
+- Nine anchors can follow once he asks, and once this mounting is
+  the only orient. They place a point of the artwork on a point of
+  the material. They are not a second feed direction.
 - The screen shows the path the protocol will run. A control for
   "as I face the machine" has to be this mounting. It must not be a
   second rotation on the widget.
@@ -230,37 +235,39 @@ path.
 
 ## Session
 
-Luke asked on 2026-10-18 to replace Swap X/Y with origin location
-and feed direction. This turn did Approach step 3 only. Do not
-start step 4, the nine anchors, until he asks. The default anchor
-must be the corner this mounting already uses, so an existing job
-does not jump.
+Luke decided on 2026-10-19 that this pass offers two radios only.
+The graph keeps the origin at the bottom-left, so feed and origin
+are one choice. Origin left (feed down) is the default. Origin
+right (feed left) is the D760 mounting. Origin left with feed left,
+and origin right with feed down, load as origin left. They are the
+later coordinate change. Leave them unmirrored. Leave Approach
+step 4, the nine anchors, until he asks. The default anchor must be
+the corner this mounting already uses, so an existing job does not
+jump.
 
-The Output page (`inkcut/device/view.enaml`) has Feed (`down` or
-`left`) and Origin (`left` or `right`). Mirror X and Mirror Y stay.
-The Swap X/Y checkbox is gone. `feed_to_end` and `feed_after` stay
-on the job.
+The Output page (`inkcut/device/view.enaml`) has those two radios.
+Mirror X and Mirror Y stay under Orientation. The rotation widget
+stays commented. `feed_to_end` and `feed_after` stay on the job.
 
-`DeviceConfig` has no `swap_xy` member. `__init__` and
-`__setstate__` pop that key. True, with neither new field present,
-loads as feed `left` and origin `right`: `QTransform.rotate(90)`,
-`(x, y) → (−y, x)`, Feed After at the bottom-right, Return at the
-bottom-left. False or absent stays feed `down`, origin `left`.
-Named fields win. `__getstate__` does not write `swap_xy`.
+`DeviceConfig` stores `origin_side` only (`left` or `right`).
+`feed_for_origin` derives the feed. Right yields `left`: rotate 90,
+then seat the trailing moveTo on y = 0 and keep x. Anything else
+yields `down`: no rotate, and the trailing pen-up stays where the
+park left it. `__init__` and `__setstate__` run
+`_origin_from_legacy`. When both `origin_side` and `feed_direction`
+are present, only `(left, down)` and `(right, left)` are kept. Any
+other pair stores `left`. A lone `feed_direction` of `left` stores
+origin `right`. A lone `down` stores `left`. With no origin and
+`swap_xy` true, store `right`. `__getstate__` writes `origin_side`
+and drops `swap_xy` and `feed_direction`.
 
 Factory dicts in `inkcut/device/drivers/manifest.enaml` were not
 edited. Roland Stika SV-15, SV-12, and SV-8, and Silhouette Cameo 4
-still pass `swap_xy` true and get that mounting. Cameo also keeps
-scale `5.64` and both mirrors. The Summa D760 preset was not
-touched. Luke's saved profile still has the old key until the app
-saves; the loader maps it. Do not edit `~/.config/inkcut/`.
-
-Opposite origin (down + right, or left + left) mirrors across the
-feed axis, parks again, and seats the trailing moveTo on the origin
-edge. A rectangle's endpoints match the natural side. An asymmetric
-path flips. `tests/test_device_output.py` locks that and the
-rectangle contract. Do not weaken it. Do not restore the old feed
-at device `(0, 230)`.
+still pass `swap_xy` true and load as Origin right. Cameo also
+keeps scale `5.64` and both mirrors. The Summa D760 preset was not
+touched. Its raw path stays `/dev/ttyUSB0`. Luke's saved profile
+still has the old key until the app saves. The loader maps it.
+Leave `~/.config/inkcut/` alone.
 
 `job.model` is not mutated. The document feed stays `(0, -80)`.
 `init` does not call `create()`. `config.rotation` stays off the
@@ -269,34 +276,41 @@ Protocol files were not edited. The on-screen origin stays at the
 parked corner. A facing view that redraws it is a later change of
 picture and knife together.
 
-Do not tick the Human checkboxes. Do not send a job to the cutter,
-including `/dev/ttyUSB0`. Do not open a pull request. Luke opens
-any upstream PR himself. `inkcut/inkcut#442` was closed on
-2026-10-17 and branch `pr/d760-path` was deleted. Do not reopen it.
-Do not edit `architecture.md`. It still names Swap X/Y. That
-leftover is in `agents/conflicts.md`.
+Leave the Human checkboxes unticked. Send no job to the cutter,
+including `/dev/ttyUSB0`. Open no pull request. Luke opens any
+upstream PR himself. `inkcut/inkcut#442` was closed on 2026-10-17
+and branch `pr/d760-path` was deleted. Leave it closed. Leave
+`architecture.md`, `glossary.md`, and `project.md` alone. They
+still name Swap X/Y. That leftover is in `agents/conflicts.md`.
 
-The blank-preview fix is in `inkcut/preview/plot_view.py`. Do not
-put `processEvents` or a pin that reads `axis.width()` or
-`maximumWidth()` back. The green and red travel lines stay the 1 px
-cosmetic stroke. Do not touch pen widths or
-`PainterPathPlotItem.updateData`. French and German `.ts` files
-were left alone. `lrelease` is not installed. New Output strings
-fall back to English.
+The blank-preview fix is in `inkcut/preview/plot_view.py`. Leave
+`processEvents` out, and leave out any pin that reads
+`axis.width()` or `maximumWidth()`. The green and red travel lines
+stay the 1 px cosmetic stroke. Leave pen widths and
+`PainterPathPlotItem.updateData` alone. `fit_once` stays only in
+`preview/view.enaml`. The live plot still auto-ranges. French and
+German `.ts` files were left alone. `lrelease` is not installed.
+New Output strings fall back to English.
 
-Marks read feed direction and origin side. Down + left is labeled
-Origin (Left), arrow down. Left + right is labeled Origin (Right),
-arrow left. Changing Feed or Origin in the device dialog still
-waits for a save, or a job change, before the preview redraws.
+Marks use `mounting_names(origin_side)`. Origin left is labeled
+Origin (Left), arrow down. Origin right is labeled Origin (Right),
+arrow left. Changing the radio in the device dialog still waits
+for a save, or a job change, before the preview redraws.
 
-Tests on 2026-10-18, 74 passed:
+The rectangle contract is unchanged for the two radios. Keep
+`tests/test_device_output.py` as it is. Leave the old feed at
+device `(0, 230)` unrestored.
+
+Tests on 2026-10-19, 72 passed:
 
 `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/test_device_output.py tests/test_preview_markers.py tests/test_plotter_unit_scale.py -q`
 
-The Output view was constructed offscreen for a default config and
-for `DeviceConfig(swap_xy=True)`.
+The Output view was constructed offscreen. The default checks
+Origin left. `DeviceConfig(swap_xy=True)` checks Origin right.
 
 The facing-view checkbox stays open. The feed-cut checkbox stays
-open. Neither blocks a later step 4 once he asks. `44579bd` is Feed
-After after he cut it. `e2920a6` is the known-good cut from before
-either corner snap. He has not re-tested Return in Inkscape.
+open. `44579bd` is Feed After after he cut it. `e2920a6` is the
+known-good cut from before either corner snap. He has not
+re-tested Return in Inkscape.
+
+Verifier agreed. Disagreement count for this task is zero.

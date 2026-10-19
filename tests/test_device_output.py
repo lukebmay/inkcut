@@ -110,7 +110,6 @@ def test_oriented_path_matches_the_bed(swap_xy, scale, padding, art, feed, bed):
 
     outline = orient_bed(
         job.material.path,
-        device.config.feed_direction,
         device.config.origin_side,
         device.output_scale(),
     )
@@ -265,42 +264,56 @@ def test_job_plugin_imports():
     assert callable(JobPlugin._refresh_preview)
 
 
-def test_default_mounting_is_down_left():
+def test_default_origin_is_left():
     config = DeviceConfig()
-    assert config.feed_direction == "down"
     assert config.origin_side == "left"
+    assert "feed_direction" not in config.members()
     state = config.__getstate__()
-    assert state["feed_direction"] == "down"
     assert state["origin_side"] == "left"
     assert "swap_xy" not in state
+    assert "feed_direction" not in state
 
 
 def test_saved_swap_true_loads_rotate_90():
     config = DeviceConfig()
     config.__setstate__({"swap_xy": True})
-    assert config.feed_direction == "left"
     assert config.origin_side == "right"
+    state = config.__getstate__()
+    assert state["origin_side"] == "right"
+    assert "swap_xy" not in state
+    assert "feed_direction" not in state
     path = Device(config=config).output_path(make_job([0, 0, 0, 0]))
     assert feed_point(path) == pytest.approx((80, 0))
     assert screen_box(artwork(path)) == pytest.approx((0, 0, 50, 200))
 
 
-def test_saved_swap_false_stays_down_left():
+def test_saved_swap_false_stays_origin_left():
     config = DeviceConfig()
     config.__setstate__({"swap_xy": False})
-    assert config.feed_direction == "down"
     assert config.origin_side == "left"
 
 
-def test_saved_swap_does_not_override_new_fields():
+def test_saved_swap_does_not_override_a_legal_pair():
     config = DeviceConfig()
     config.__setstate__({
         "swap_xy": True,
         "feed_direction": "down",
         "origin_side": "left",
     })
-    assert config.feed_direction == "down"
     assert config.origin_side == "left"
+
+
+def test_saved_right_left_stays_origin_right():
+    config = DeviceConfig()
+    config.__setstate__({
+        "origin_side": "right",
+        "feed_direction": "left",
+    })
+    assert config.origin_side == "right"
+    state = config.__getstate__()
+    assert state["origin_side"] == "right"
+    assert "swap_xy" not in state
+    assert "feed_direction" not in state
 
 
 def test_factory_swap_true_keeps_cameo_scale():
@@ -310,7 +323,6 @@ def test_factory_swap_true_keeps_cameo_scale():
         mirror_x=True,
         mirror_y=True,
     )
-    assert config.feed_direction == "left"
     assert config.origin_side == "right"
     assert list(config.scale) == pytest.approx([5.64, 5.64])
     assert config.mirror_x is True
@@ -328,25 +340,39 @@ def asymmetric_path():
     return path
 
 
-@pytest.mark.parametrize(
-    "feed_direction, origin_side, final, corner",
-    [
-        ("down", "left", (0, -70), (100, -10)),
-        ("down", "right", (0, -70), (0, -10)),
-        ("left", "right", (70, 0), (10, 0)),
-        ("left", "left", (70, 0), (10, -100)),
-    ],
-)
-def test_opposite_origin_mirrors_an_asymmetric_path(
-    feed_direction, origin_side, final, corner
-):
+def test_illegal_pair_does_not_mirror():
+    assert DeviceConfig(
+        feed_direction="left", origin_side="left").origin_side == "left"
+    assert DeviceConfig(
+        feed_direction="down", origin_side="right").origin_side == "left"
+    for state in (
+        {"feed_direction": "left", "origin_side": "left"},
+        {"feed_direction": "down", "origin_side": "right"},
+    ):
+        config = DeviceConfig()
+        config.__setstate__(state)
+        assert config.origin_side == "left"
+
     path = asymmetric_path()
-    oriented = orient_path(path, feed_direction, origin_side, (1, 1))
-    end = oriented.elementAt(oriented.elementCount() - 1)
-    assert end.isMoveTo()
-    assert (end.x, end.y) == pytest.approx(final)
-    bent = oriented.elementAt(2)
+    left = orient_path(path, "left", (1, 1))
+    bent = left.elementAt(2)
     assert bent.isLineTo()
-    assert (bent.x, bent.y) == pytest.approx(corner)
-    source = path.elementAt(path.elementCount() - 1)
-    assert (source.x, source.y) == pytest.approx((0, -70))
+    assert (bent.x, bent.y) == pytest.approx((100, -10))
+    end = left.elementAt(left.elementCount() - 1)
+    assert end.isMoveTo()
+    assert (end.x, end.y) == pytest.approx((0, -70))
+
+    right = orient_path(path, "right", (1, 1))
+    bent = right.elementAt(2)
+    assert bent.isLineTo()
+    assert (bent.x, bent.y) == pytest.approx((10, 0))
+    end = right.elementAt(right.elementCount() - 1)
+    assert end.isMoveTo()
+    assert (end.x, end.y) == pytest.approx((70, 0))
+    assert (bent.x, bent.y) != pytest.approx((0, -10))
+    assert (bent.x, bent.y) != pytest.approx((10, -100))
+
+    source = path.elementAt(2)
+    assert (source.x, source.y) == pytest.approx((100, -10))
+    source_end = path.elementAt(path.elementCount() - 1)
+    assert (source_end.x, source_end.y) == pytest.approx((0, -70))

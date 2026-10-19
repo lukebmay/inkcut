@@ -15,24 +15,14 @@ import textwrap
 from enaml.layout.api import hbox, vbox, spacer, align
 from enaml.qt.QtWidgets import QApplication
 from enaml.widgets.api import (
-    Form, CheckBox, Container, Label, ProgressBar, PushButton, Notebook, Page, ObjectCombo,
-    Action, Menu, MultilineField
+    Form, CheckBox, Container, Label, ProgressBar, PushButton, Notebook, Page,
+    RadioButton, Action, Menu, MultilineField
 )
 from enamlx.widgets.api import DoubleSpinBox
 from inkcut.core.api import Model, DockItem
 from inkcut.core.utils import to_unit, load_icon
 from inkcut.preview.plot_view import PlotView
 from .plugin import DeviceConfig
-
-
-def _choice_label(value):
-    if value == "down":
-        return QApplication.translate("device", "Down")
-    if value == "left":
-        return QApplication.translate("device", "Left")
-    if value == "right":
-        return QApplication.translate("device", "Right")
-    return str(value)
 
 
 enamldef ConfigView(Container):
@@ -81,23 +71,25 @@ enamldef DeviceConfigView(Container):
             title = QApplication.translate("device", "Output")
             Form:
                 Label:
-                    text = QApplication.translate("device", "Feed")
-                ObjectCombo:
-                    items = list(model.get_member('feed_direction').items)
-                    to_string = _choice_label
-                    selected := model.feed_direction
-                    tool_tip = QApplication.translate(
-                        "device",
-                        "Which way this cutter's roller advances the vinyl.")
-                Label:
-                    text = QApplication.translate("device", "Origin")
-                ObjectCombo:
-                    items = list(model.get_member('origin_side').items)
-                    to_string = _choice_label
-                    selected := model.origin_side
-                    tool_tip = QApplication.translate(
-                        "device",
-                        "Which side of that feed the origin is on.")
+                    text = ""
+                Container:
+                    constraints = [
+                        vbox(origin_left, origin_right)
+                    ]
+                    RadioButton: origin_left:
+                        text = QApplication.translate(
+                            "device", "Origin left (feed down)")
+                        checked << model.origin_side == 'left'
+                        checked ::
+                            if change['value']:
+                                model.origin_side = 'left'
+                    RadioButton: origin_right:
+                        text = QApplication.translate(
+                            "device", "Origin right (feed left)")
+                        checked << model.origin_side == 'right'
+                        checked ::
+                            if change['value']:
+                                model.origin_side = 'right'
                 Label:
                     text = QApplication.translate("device", "Orientation")
                 Container:

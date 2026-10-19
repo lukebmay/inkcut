@@ -52,10 +52,10 @@ def test_travel_splits_the_approach_and_the_finish():
 
 
 def test_swap_on_names_the_d760_picture():
-    assert mounting_names("down", "left") == ("Left", "down")
-    assert mounting_names("left", "right") == ("Right", "left")
+    assert mounting_names("left") == ("Left", "down")
+    assert mounting_names("right") == ("Right", "left")
     _middle, approach, finish, marks = cut_overlay(
-        rect_path(), (0.0, 0.0), "left", "right")
+        rect_path(), (0.0, 0.0), "right")
     assert marks.origin_name == "Right"
     assert marks.feed == "left"
     assert marks.final == (0.0, -80.0)

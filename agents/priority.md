@@ -4,7 +4,7 @@ A prompt of Continue works this list from the top. How that turn runs is catalog
 
 **Owner:** agent. This file is the ordered list of work. Session notes live on the plan.
 
-**Updated:** 2026-10-18
+**Updated:** 2026-10-19
 
 Open rows in [`conflicts.md`](./conflicts.md) that have no resolving
 plan must get a plan on this list.
@@ -14,7 +14,7 @@ plan must get a plan on this list.
 | Pri | Plan | Status | Notes |
 | --- | --- | --- | --- |
 | P1 | Cut Selection | waiting | `agents/plans/cut-selection.md`. Human checkbox is still his. On 2026-10-17 he opened one of two text objects with Cut selection and only that object came in. |
-| P2 | Device path | waiting | `agents/plans/device-path.md`. Step 3 is in: Feed and Origin replace Swap X/Y. Next is Approach step 4, the nine anchors, only when he asks. Human checkboxes stay open. Do not open a pull request. |
+| P2 | Device path | waiting | `agents/plans/device-path.md`. Two radios are in: Origin left (feed down) and Origin right (feed left). Nine anchors wait until he asks. Human checkboxes stay open. Do not open a pull request. |
 
 Weedlines stays in `~/dev/me/weedlines`. It is not this queue.
 

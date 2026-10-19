@@ -7,6 +7,7 @@ from enaml.qt import QtCore, QtGui
 from enaml.qt.QtWidgets import QApplication
 from pyqtgraph.graphicsItems.GraphicsObject import GraphicsObject
 
+from inkcut.device.plugin import feed_for_origin
 from inkcut.job.models import travel_parts
 
 
@@ -36,11 +37,12 @@ def placed_origin(device, job):
     return (0.0, 0.0)
 
 
-def mounting_names(feed_direction, origin_side):
+def mounting_names(origin_side):
     """ Caption from the origin side. The arrow is the feed direction. """
+    feed = feed_for_origin(origin_side)
     if origin_side == "right":
-        return "Right", feed_direction
-    return "Left", feed_direction
+        return "Right", feed
+    return "Left", feed
 
 
 def origin_caption(name):
@@ -263,7 +265,7 @@ class PreviewMarks(GraphicsObject):
         painter.restore()
 
 
-def cut_overlay(path, head, feed_direction, origin_side):
+def cut_overlay(path, head, origin_side):
     """ Middle travel, approach, finish, and the marker item for one path. """
     approach, middle, finish = travel_parts(path, head)
     if finish is not None:
@@ -273,6 +275,6 @@ def cut_overlay(path, head, feed_direction, origin_side):
         final = (end.x, end.y)
     else:
         final = head
-    origin_name, feed = mounting_names(feed_direction, origin_side)
+    origin_name, feed = mounting_names(origin_side)
     marks = PreviewMarks(head, head, final, feed, origin_name)
     return middle, line_path(approach), line_path(finish), marks

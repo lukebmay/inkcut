@@ -37,4 +37,4 @@ None.
 
 | Name | Still taught as | Plan |
 | --- | --- | --- |
-| Swap X/Y as the live orientation control | `architecture.md`, `glossary.md`, `project.md` | [`device-path`](./plans/device-path.md). The device config is feed direction and origin side. Update those files when the human says to edit them. |
+| Swap X/Y as the live orientation control | `architecture.md`, `glossary.md`, `project.md` | [`device-path`](./plans/device-path.md). The Output page stores one `origin_side`. Origin left feeds down. Origin right feeds left. Update those files when the human says to edit them. |
