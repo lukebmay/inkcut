@@ -14,7 +14,7 @@ plan must get a plan on this list.
 | Pri | Plan | Status | Notes |
 | --- | --- | --- | --- |
 | P1 | Cut Selection | waiting | `agents/plans/cut-selection.md`. Human checkbox is still his. On 2026-10-17 he opened one of two text objects with Cut selection and only that object came in. |
-| P2 | Device path | waiting | `agents/plans/device-path.md`. Two radios are in: Origin left (feed down) and Origin right (feed left). Nine anchors wait until he asks. Human checkboxes stay open. Do not open a pull request. |
+| P2 | Device path | waiting | `agents/plans/device-path.md`. He cut Origin right (feed left) on the D760 on 2026-10-19. Facing-view checkbox stays open. Nine anchors wait until he asks. Do not open a pull request. |
 
 Weedlines stays in `~/dev/me/weedlines`. It is not this queue.
 

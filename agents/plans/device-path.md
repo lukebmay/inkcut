@@ -68,7 +68,7 @@ chosen once, not a direction the job can aim along the carriage.
 Why human-only: the sideways preview is the knife's frame. Which
 way that frame should face you is your call.
 
-- [ ] On the D760, with the usual profile (Origin right, feed
+- [x] On the D760, with the usual profile (Origin right, feed
       left), cut a rectangle with Feed After set to a distance you
       can see. The vinyl should advance past the piece. The
       carriage should not travel off along the other axis instead.
@@ -276,7 +276,9 @@ Protocol files were not edited. The on-screen origin stays at the
 parked corner. A facing view that redraws it is a later change of
 picture and knife together.
 
-Leave the Human checkboxes unticked. Send no job to the cutter,
+Leave the facing-view checkbox unticked. The D760 feed-cut
+checkbox is ticked: Luke tested the two radios on 2026-10-19 and
+said the cut is good. Send no job to the cutter,
 including `/dev/ttyUSB0`. Open no pull request. Luke opens any
 upstream PR himself. `inkcut/inkcut#442` was closed on 2026-10-17
 and branch `pr/d760-path` was deleted. Leave it closed. Leave
@@ -308,8 +310,9 @@ Tests on 2026-10-19, 72 passed:
 The Output view was constructed offscreen. The default checks
 Origin left. `DeviceConfig(swap_xy=True)` checks Origin right.
 
-The facing-view checkbox stays open. The feed-cut checkbox stays
-open. `44579bd` is Feed After after he cut it. `e2920a6` is the
+The facing-view checkbox stays open. Luke tested Origin right
+(feed left) on the D760 on 2026-10-19 and said it is good.
+`44579bd` is Feed After after he cut it. `e2920a6` is the
 known-good cut from before either corner snap. He has not
 re-tested Return in Inkscape.
 
