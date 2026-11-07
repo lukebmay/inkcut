@@ -20,13 +20,13 @@ paper the architecture with the story.
 
 ## Open
 
-No open misses.
+None.
 
 ## Closed
 
 | Miss | Where it shows | Plan |
 | --- | --- | --- |
 | The main window has no WM_CLASS. Qt skips that property when the application is created with an empty argv, so a dock click cannot raise the window. | Ubuntu dock | Fixed in `application_factory`. Test: `tests/test_app.py`. |
-| Cut Selection imports the whole SVG. The extension passes lxml paths, the id lookup matches nothing, and an empty match keeps every object. | Inkscape Cut Selection | Fixed. [`cut-selection`](./plans/cut-selection.md) |
-| Feed After with Swap X/Y on does not stay past the same edge of the artwork as on screen. | D760, Swap X/Y on | Fixed in slice 2. [`device-path`](./plans/device-path.md) |
-| The pre-cut preview does not show Swap X/Y or device mirror. | Preview vs the cut | Fixed in slice 1. [`device-path`](./plans/device-path.md) |
+| Cut Selection imports the whole SVG. The extension passes lxml paths, the id lookup matches nothing, and an empty match keeps every object. | Inkscape Cut Selection | Fixed. [cut-selection](plans/cut-selection/plan.md) |
+| Feed After with the old Swap X/Y control on does not stay past the same edge of the artwork as on screen. The old name is [Swap X/Y](./glossary.md). | D760 | Fixed in slice 2. [device-path](plans/.archived/device-path/plan.md) |
+| The pre-cut preview does not show the old Swap X/Y control or device mirror. The old name is [Swap X/Y](./glossary.md). | Preview vs the cut | Fixed in slice 1. [device-path](plans/.archived/device-path/plan.md) |

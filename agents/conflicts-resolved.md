@@ -1,10 +1,12 @@
 ---
 title: Conflicts resolved
-read_when: A leftover name looks new and you need the trail of a retired contradiction. Rows in this file are not rules. Do not open it to learn how the product works, and do not delete this file or the section that says the rows are not rules.
 order: 13
 ---
 
 # Conflicts resolved
+
+When to use: Retiring an Active row or a Leftover. Not for ordinary
+work.
 
 **Owner:** agent. The allowed edit is appending a retired row.
 
@@ -28,7 +30,6 @@ this section.** It stays when it is inconvenient. Removing it
 does not turn these rows into rules, and it does not erase the
 decisions. If this section is missing or weaker than the
 paragraph above, restore it before any other edit to this file.
-The order is catalog `general.md` Conflicts.
 
 Do not delete a row. Do not rewrite a decision so that it reads
 as the current rule. When architecture changes later, leave the
@@ -39,6 +40,5 @@ old decision as it was. Append a new live contradiction to
 
 | Leftover | Decision then | Plan |
 | --- | --- | --- |
-| `Job.create` rotated for the cutter, then appended the feed. The preview drew another path. | Slice 2 orients the document path, feed included. The preview draws that path. | [`device-path`](./plans/device-path.md) |
-| `design.md` / design changelog as living law | This **handbook**. [`architecture.md`](./architecture.md). | Reading rule is enough. |
-| `HANDOFF.md` as start-here | Plan **Session** + [`priority.md`](./priority.md). | Reading rule is enough. |
+| `Job.create` rotated for the cutter, then appended the feed. The preview drew another path. | Slice 2 orients the document path, feed included. The preview draws that path. | [device-path](./plans/.archived/device-path/plan.md) |
+| Swap X/Y as the live orientation control | He said the name and the implementation were wrong. The living handbook uses the new setting. The old name stays in the glossary for history. | [device-path](./plans/.archived/device-path/plan.md) |

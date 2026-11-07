@@ -2,8 +2,7 @@
 
 Portable agent guidelines (security, git, languages, logging, …).
 
-Prefer refreshing these from the shellrc `agents` catalog (`agents install` / `agents update`) rather than editing them here.
+Prefer refreshing these from the shellrc `agent-handbook` catalog (`agent-handbook install` / `agent-handbook update`) rather than editing them here.
 
-Project-specific process is the parent handbook (`general.md`,
-`testing.md`, `documentation.md`, `architecture.md`, `acceptance.md`,
-…). Those win on conflict.
+Project-specific process is the parent handbook (`handbook.md`,
+`plans/README.md`, `roles/`). Those win on conflict.

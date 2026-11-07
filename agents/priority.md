@@ -1,33 +1,42 @@
 # Priority
 
-A prompt of Continue works this list from the top. How that turn runs is catalog `general.md`.
+When to use: The orchestrator is choosing the next plan.
 
-**Owner:** agent. This file is the ordered list of work. Session notes live on the plan.
+**Owner:** agent. This file is the ordered list of plans.
 
-**Updated:** 2026-10-19
+Work on `master`. The next plan is chosen as
+[`plans/README.md`](plans/README.md) Rank says. How that turn
+runs is [`roles/orchestrator.md`](roles/orchestrator.md). An
+agent with no role does not open this file.
 
-Open rows in [`conflicts.md`](./conflicts.md) that have no resolving
-plan must get a plan on this list.
+A waiting plan stays under its rank. The notes say why. Skip it.
 
-## Next session
+## 5 top
 
-1. [complete-v0.1.4-v0.7.0-migration](./plans/complete-v0.1.4-v0.7.0-migration.md).
-   Rank 5. Do this before every other plan. Move this
-   repo onto agent-handbook, translate the plans, then
-   triage the queue.
-
-## Active
-
-| Pri | Plan | Status | Notes |
-| --- | --- | --- | --- |
-| 5 | agent-handbook migration | next | [complete-v0.1.4-v0.7.0-migration](./plans/complete-v0.1.4-v0.7.0-migration.md). Do this before every other plan. |
-| P1 | Cut Selection | waiting | `agents/plans/cut-selection.md`. Human checkbox is still his. On 2026-10-17 he opened one of two text objects with Cut selection and only that object came in. |
-| P2 | Device path | waiting | `agents/plans/device-path.md`. He cut Origin right (feed left) on the D760 on 2026-10-19. Facing-view checkbox stays open. Nine anchors wait until he asks. Do not open a pull request. |
-
-Weedlines stays in `~/dev/me/weedlines`. It is not this queue.
-
-## On hold / optional
-
-| Item | Status |
+| Plan | Notes |
 | --- | --- |
-| inkcut CLI install/update/data | optional |
+| *(none)* | |
+
+## 4 high
+
+| Plan | Notes |
+| --- | --- |
+| *(none)* | |
+
+## 3 medium
+
+| Plan | Notes |
+| --- | --- |
+| [cut-selection](plans/cut-selection/plan.md) | Waiting. The code checks are done. The Inkscape path confirmation is still his. |
+
+## 2 low
+
+| Plan | Notes |
+| --- | --- |
+| *(none yet)* | |
+
+## 1 optional
+
+| Plan | Notes |
+| --- | --- |
+| *(none yet)* | |

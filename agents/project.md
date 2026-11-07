@@ -31,8 +31,7 @@ How it is built: [`architecture.md`](./architecture.md). Words:
 - Plugin state is jsonpickle JSON at `~/.config/inkcut/{plugin id}.json`.
   The device file is `inkcut.device.json`. Members tagged
   `config=True` are the ones that persist.
-- The D760 profile in use has Swap X/Y turned on. That control is a
-  90° rotation, `(x, y) → (−y, x)`, not an exchange of the axes.
-  Output scale is applied as part of device orientation.
+- The D760 profile in use is Origin right (feed left). Output scale
+  is applied as part of device orientation.
 - Remotes: `origin` is `git@github.com:lukebmay/inkcut.git`.
   `upstream` is `git@github.com:inkcut/inkcut.git`.
