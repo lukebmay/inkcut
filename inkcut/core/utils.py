@@ -33,7 +33,7 @@ def clip(s, n=1000):
     """Shorten the name of a large value when logging"""
     v = str(s)
     if len(v) > n:
-        v[:n] + "..."
+        v = v[:n] + "..."
     return v
 
 

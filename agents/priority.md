@@ -27,7 +27,7 @@ A waiting plan stays under its rank. The notes say why. Skip it.
 
 | Plan | Notes |
 | --- | --- |
-| [handbook-core-index](plans/handbook-core-index/plan.md) | `inkcut/core/` has more than one source file and no directory index. |
+| [_bugs](plans/_bugs/plan.md) | No open task. `clip` now returns the shortened string. |
 | [cut-selection](plans/cut-selection/plan.md) | Waiting. The code checks are done. The Inkscape path confirmation is still his. |
 | [device-error](plans/device-error/plan.md) | Ready. `DeviceError` is declared and unused. Not a handbook plan. |
 

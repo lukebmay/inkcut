@@ -24,10 +24,12 @@ story pasted into architecture.
 
 None.
 
+
 ## Closed
 
 | Miss | Where it shows | Plan |
 | --- | --- | --- |
+| `clip` dropped the shortened string and returned the whole value. It now keeps the first n characters plus `...`. | `inkcut/core/utils.py` | [clip-drops-short](plans/_bugs/tasks/inactive/clip-drops-short/task.md) |
 | The main window has no WM_CLASS. Qt skips that property when the application is created with an empty argv, so a dock click cannot raise the window. | Ubuntu dock | Fixed in `application_factory`. Test: `tests/test_app.py`. |
 | Cut Selection imports the whole SVG. The extension passes lxml paths, the id lookup matches nothing, and an empty match keeps every object. | Inkscape Cut Selection | Fixed. [cut-selection](plans/cut-selection/plan.md) |
 | Feed After with the old Swap X/Y control on does not stay past the same edge of the artwork as on screen. The old name is [Swap X/Y](./glossary.md). | D760 | Fixed in slice 2. [device-path](plans/.archived/device-path/plan.md) |
