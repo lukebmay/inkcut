@@ -30,9 +30,10 @@ package, not a one-file program. That split is done. The plan is
 
 0.9.15 says an installable app reads `INKCUT_CONFIG_HOME` and the
 other app homes. The resolver is the only reader of the XDG
-variables. The app still hardcodes `~/.config/inkcut`. That
-correction is
-[handbook-xdg-homes](../handbook-xdg-homes/plan.md).
+variables. That correction is done. The plan is
+[handbook-xdg-homes](../.archived/handbook-xdg-homes/plan.md).
+With both variables unset, plugin state stays
+`~/.config/inkcut/{plugin id}.json`.
 
 ## Older plans
 

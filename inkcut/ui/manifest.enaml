@@ -23,6 +23,7 @@ from enaml.workbench.ui.api import (
 from inkcut.ui.extensions import (
     DOCK_ITEM_POINT, SETTINGS_PAGE_POINT, SettingsPage
 )
+from inkcut.core.homes import log_dir
 from inkcut.core.utils import menu_icon
 from enaml.qt.QtWidgets import QApplication
 
@@ -180,7 +181,7 @@ enamldef UIManifest(PluginManifest):
             path = '/help/logs'
             label = QApplication.translate("settings", "Logs")
             command = 'inkcut.ui.open_webpage'
-            parameters = {'url':os.path.expanduser('~/.config/inkcut/logs/')}
+            parameters = {'url': log_dir() + os.sep}
 #        ActionItem:
 #            path = '/help/about'
 #            label = QApplication.translate("settings", "About")

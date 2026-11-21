@@ -21,16 +21,17 @@ from logging.handlers import RotatingFileHandler
 
 
 def init_logging():
-    """ Configures logging to .config/inkcut/logs within the user's home
-    directory. Logging is now initialized before any external dependencies
-    are imported so any missing or incorrect libraries are correctly caught
-    and reported as errors in the log.
+    """ Log under the state home before external libraries are imported.
+
+    Missing or incorrect libraries are then reported in that log. Logs
+    already stored under the config home are left where they are.
 
     """
-    log_dir = os.path.expanduser('~/.config/inkcut/logs')
-    if not os.path.exists(log_dir):
-        os.makedirs(log_dir)
-    log_filename = os.path.join(log_dir, 'inkcut.txt')
+    from inkcut.core.homes import log_dir
+    logs = log_dir()
+    if not os.path.exists(logs):
+        os.makedirs(logs)
+    log_filename = os.path.join(logs, 'inkcut.txt')
     log_format = '%(asctime)-15s | %(levelname)-7s | %(name)s | %(message)s'
 
     try:
@@ -39,7 +40,7 @@ def init_logging():
         if 'INKCUT_DEBUG' in os.environ:
             crashlog = sys.stderr
         else:
-            crashlog = open(os.path.join(log_dir, 'crash.txt'), 'a+')
+            crashlog = open(os.path.join(logs, 'crash.txt'), 'a+')
         faulthandler.enable(crashlog)
     except Exception as e:
         print("Warning: faulthandler could not be enabled: {}".format(e))

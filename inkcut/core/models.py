@@ -20,6 +20,7 @@ from atom.api import (
 from enaml.workbench.plugin import Plugin as EnamlPlugin
 from enaml.widgets.api import Container
 from enaml.qt import QtCore, QtGui
+from .homes import config_home
 from .utils import log, clip
 
 
@@ -186,8 +187,8 @@ class Plugin(EnamlPlugin):
         self._save_state({'type': 'request'})
 
     def _default__state_file(self):
-        return os.path.expanduser(
-            "~/.config/inkcut/{}.json".format(self.manifest.id))
+        return os.path.join(
+            config_home(), '{}.json'.format(self.manifest.id))
 
     def _default__state_members(self):
         members = []  #: Init state members
