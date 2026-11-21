@@ -28,6 +28,7 @@ A waiting plan stays under its rank. The notes say why. Skip it.
 | Plan | Notes |
 | --- | --- |
 | [cut-selection](plans/cut-selection/plan.md) | Waiting. The code checks are done. The Inkscape path confirmation is still his. |
+| [device-error](plans/device-error/plan.md) | Ready. `DeviceError` is declared and unused. Not a handbook plan. |
 
 ## 2 low
 
