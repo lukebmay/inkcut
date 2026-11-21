@@ -16,7 +16,8 @@ from cProfile import Profile
 from atom.api import Instance, List, Int, Float, Tuple, Dict, Bool, observe
 from inkcut.core.api import Model
 from inkcut.core.utils import async_sleep, log
-from inkcut.device.plugin import Device, DeviceConfig
+from inkcut.device.device_config import DeviceConfig
+from inkcut.device.plugin import Device
 from twisted.internet.defer import inlineCallbacks, DeferredList
 from contextlib import contextmanager
 from enaml.qt import QtGui

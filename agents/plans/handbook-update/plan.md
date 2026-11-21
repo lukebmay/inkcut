@@ -23,9 +23,10 @@ lines, and no plan that would split one.
 0.9.16 says a source file aims for under 1200 ordinary lines. A
 split noticed during other work is a later file-size plan. The
 one-file count in that entry is the one 0.9.17 replaced.
-`inkcut/device/plugin.py` is 1398 lines. It is part of the device
-package, not a one-file program. That split is
-[handbook-device-plugin-split](../handbook-device-plugin-split/plan.md).
+`inkcut/device/plugin.py` was 1398 lines. It is part of the device
+package, not a one-file program. That split is done. The plan is
+[handbook-device-plugin-split](../.archived/handbook-device-plugin-split/plan.md).
+`plugin.py` is under 1200 lines.
 
 0.9.15 says an installable app reads `INKCUT_CONFIG_HOME` and the
 other app homes. The resolver is the only reader of the XDG

@@ -8,7 +8,8 @@ Thanks to Lex Wernars
 @author: lwernars
 """
 from atom.api import Enum, Instance
-from inkcut.device.plugin import DeviceProtocol, Model
+from inkcut.core.api import Model
+from inkcut.device.device_protocol import DeviceProtocol
 from inkcut.core.svg import INKCUT_DPI
 from inkcut.device.protocols.units import (
     ADDRESSING_0_001_INCH, ADDRESSING_0_025_MM, ADDRESSING_LEGACY,

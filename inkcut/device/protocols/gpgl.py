@@ -7,7 +7,7 @@ Thanks to Lex Wernars
 @author: jrm
 @author: lwernars
 """
-from inkcut.device.plugin import DeviceProtocol
+from inkcut.device.device_protocol import DeviceProtocol
 
 
 class GPGLProtocol(DeviceProtocol):

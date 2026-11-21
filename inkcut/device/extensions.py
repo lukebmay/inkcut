@@ -36,7 +36,8 @@ def default_device_factory(driver, transports, protocols, config=None):
     result: Device
         A configured Device that the application can use.
     """
-    from .plugin import Device, DeviceConfig
+    from .device_config import DeviceConfig
+    from .plugin import Device
     if not config:
         config = DeviceConfig(**driver.get_device_config())
     return Device(declaration=driver,

@@ -16,7 +16,7 @@ import traceback
 from atom.atom import set_default
 from atom.api import List, Instance, Str
 from inkcut.core.api import Plugin, Model, log
-from inkcut.device.plugin import DeviceTransport
+from inkcut.device.device_transport import DeviceTransport
 from twisted.internet import reactor
 from twisted.internet.protocol import ProcessProtocol
 

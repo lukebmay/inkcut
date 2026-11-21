@@ -4,7 +4,7 @@ Created on Oct 23, 2015
 
 @author: jrm
 '''
-from inkcut.device.plugin import DeviceProtocol
+from inkcut.device.device_protocol import DeviceProtocol
 from inkcut.core.utils import async_sleep, log
 
 

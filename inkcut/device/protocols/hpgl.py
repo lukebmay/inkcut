@@ -5,7 +5,8 @@ Created on Jul 25, 2015
 @author: jrm
 """
 from atom.api import Instance, Bool, Enum
-from inkcut.device.plugin import DeviceProtocol, Model
+from inkcut.core.api import Model
+from inkcut.device.device_protocol import DeviceProtocol
 from inkcut.core.utils import log
 from inkcut.core.svg import INKCUT_DPI
 from inkcut.device.protocols.units import (

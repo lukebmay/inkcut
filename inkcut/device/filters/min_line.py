@@ -13,7 +13,8 @@ from math import sqrt
 from atom.api import Float, Enum, Instance
 from enaml.qt.QtCore import QPointF, QLineF
 from enaml.qt.QtGui import QPainterPath, QVector2D
-from inkcut.device.plugin import DeviceFilter, Model
+from inkcut.core.api import Model
+from inkcut.device.device_filter import DeviceFilter
 from inkcut.core.utils import (
     unit_conversions,
     log,

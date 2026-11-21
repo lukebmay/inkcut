@@ -4,7 +4,8 @@ Created on Dec 30, 2016
 
 @author: jrm
 """
-from inkcut.device.plugin import DeviceProtocol, Model
+from inkcut.core.api import Model
+from inkcut.device.device_protocol import DeviceProtocol
 from enaml.qt.QtCore import QT_TRANSLATE_NOOP
 from atom.api import (
     Bool, Float, Enum, Int, Instance, Str

@@ -15,7 +15,8 @@ from atom.api import Float, Enum, Instance
 from enaml.qt.QtCore import QPointF, QRectF, QSizeF
 from enaml.qt.QtGui import QPainterPath, QTransform, QVector2D
 
-from inkcut.device.plugin import DeviceFilter, Model
+from inkcut.core.api import Model
+from inkcut.device.device_filter import DeviceFilter
 from inkcut.core.utils import unit_conversions, log, trailing_angle
 
 

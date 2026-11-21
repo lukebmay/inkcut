@@ -22,7 +22,7 @@ from enamlx.widgets.api import DoubleSpinBox
 from inkcut.core.api import Model, DockItem
 from inkcut.core.utils import to_unit, load_icon
 from inkcut.preview.plot_view import PlotView
-from .plugin import DeviceConfig
+from .device_config import DeviceConfig
 
 
 enamldef ConfigView(Container):

@@ -12,7 +12,8 @@ Created on Dec 22, 2022
 from enaml.qt.QtCore import QPointF
 from enaml.qt.QtGui import QPainterPath
 from atom.api import Int, Instance, Float
-from inkcut.device.plugin import DeviceFilter, Model
+from inkcut.core.api import Model
+from inkcut.device.device_filter import DeviceFilter
 from inkcut.core.utils import (
     split_painter_path,
     join_painter_paths,

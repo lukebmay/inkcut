@@ -7,7 +7,8 @@ from enaml.qt.QtGui import QPainterPath, QTransform
 
 from inkcut.core.svg import QtSvgDoc
 from inkcut.core.utils import from_unit
-from inkcut.device.plugin import Device, DeviceConfig, orient_bed, orient_path
+from inkcut.device.device_config import DeviceConfig
+from inkcut.device.plugin import Device, orient_bed, orient_path
 from inkcut.job.models import Job, Material, move_path_of
 from inkcut.job.plugin import JobPlugin
 

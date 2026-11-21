@@ -10,7 +10,8 @@ Created on Dec 14, 2018
 @author: jrm
 """
 from atom.api import Float, Enum, Instance
-from inkcut.device.plugin import DeviceFilter, Model
+from inkcut.core.api import Model
+from inkcut.device.device_filter import DeviceFilter
 from inkcut.core.utils import unit_conversions
 from enaml.qt.QtGui import QPainterPath
 

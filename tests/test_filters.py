@@ -21,7 +21,8 @@ import inkcut.device.filters.min_line as min_line
 import inkcut.core.utils as utils
 import inkcut.job.models
 
-from inkcut.device.plugin import DeviceConfig, Device
+from inkcut.device.device_config import DeviceConfig
+from inkcut.device.plugin import Device
 from inkcut.device.extensions import DeviceDriver
 
 

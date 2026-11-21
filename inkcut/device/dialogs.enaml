@@ -26,7 +26,8 @@ from enamlx.widgets.api import (
     TreeView, TreeViewItem, TreeViewColumn, DoubleSpinBox
 )
 
-from .plugin import Device, DeviceConfig, DevicePlugin, DeviceProtocol
+from .device_config import DeviceConfig
+from .plugin import Device, DevicePlugin
 from .view import ConfigView, DeviceConfigView
 from inkcut.core.api import Model
 from inkcut.core.utils import to_unit, from_unit, load_icon

@@ -5,7 +5,9 @@ No window, serial port, or application boot.
 import enaml
 import pytest
 
+from inkcut.device import device_transport
 from inkcut.device import plugin as device_plugin
+from inkcut.device.device_config import DeviceConfig
 from inkcut.device.extensions import DeviceDriver, DeviceProtocol
 from inkcut.device.protocols.dmpl import DMPLConfig, DMPLProtocol
 from inkcut.device.protocols.hpgl import HPGLConfig, HPGLProtocol
@@ -44,7 +46,7 @@ class ProtocolConfigDriver:
 
 
 def connect(protocol):
-    transport = device_plugin.TestTransport(protocol=protocol)
+    transport = device_transport.TestTransport(protocol=protocol)
     transport.connect()
     return transport
 
@@ -260,7 +262,7 @@ def test_d760_factories_use_declared_units():
     device_config = driver.get_device_config()
     assert "scale" not in device_config
     assert "protocol" not in device_config
-    assert list(device_plugin.DeviceConfig(**device_config).scale) == [1, 1]
+    assert list(DeviceConfig(**device_config).scale) == [1, 1]
 
     dmpl = dmpl_factory(driver, None)
     transport = connect(dmpl)
