@@ -4,68 +4,83 @@
 
 ## Goal
 
-Inkcut's installed handbook is catalog 0.9.18. Before this update
-it was 0.9.15. The range is `agent-handbook changelog 0.9.15`.
-This plan does not edit product code. It stays off the queue. The
-next handbook update rewrites this file.
+Inkcut's installed handbook is catalog 0.9.19. Before this
+update it was 0.9.18. The range is `agent-handbook changelog
+0.9.18`. This plan does not edit product code. It stays off
+the queue. The next handbook update rewrites this file.
 
 ## Range
 
-0.9.18 is the handbook update procedure. That section is now in
-[the handbook](../../handbook.md). It asks for no product edit.
+0.9.19 replaces the 0.9.15 home rule. The statement is
+[Scripting](../../installed/scripting.md), section XDG
+directory variables (scripting 2.10.0). Any app or script
+that keeps config, data, state, cache, logs, or runtime
+files uses those homes, including a program that is not
+installed. There is no detector for a missing XDG system,
+no `~/.<app>/` default, runtime does not fall back to
+`/tmp`, and logs stay in the state home. A program with no
+install record resolves data and state on each run. An
+install records data and state once. Do not create an
+install record only to hold those paths.
 
-0.9.17 says a program that is one source file, and a script that
-is the whole program, stays one file until it passes 5000 lines.
-That replaced the 3000 line count. Skip that older count. This
-repo has no one-file program or whole-program script over 5000
-lines, and no plan that would split one.
+0.9.18 is the handbook update procedure. That section is
+already in [the handbook](../../handbook.md). Catalog 0.9.19
+does not change handbook seeds. This update did not edit
+`agents/handbook.md` or `architecture.md`.
 
-0.9.16 says a source file aims for under 1200 ordinary lines. A
-split noticed during other work is a later file-size plan. The
-one-file count in that entry is the one 0.9.17 replaced.
-`inkcut/device/plugin.py` was 1398 lines. It is part of the device
-package, not a one-file program. That split is done. The plan is
-[handbook-device-plugin-split](../.archived/handbook-device-plugin-split/plan.md).
-`plugin.py` is under 1200 lines.
-
-0.9.15 says an installable app reads `INKCUT_CONFIG_HOME` and the
-other app homes. The resolver is the only reader of the XDG
-variables. That correction is done. The plan is
-[handbook-xdg-homes](../.archived/handbook-xdg-homes/plan.md).
-With both variables unset, plugin state stays
-`~/.config/inkcut/{plugin id}.json`.
+The code that still pins state without an install record is
+[handbook-xdg](../handbook-xdg/plan.md). That plan is not on
+the queue. This plan does not make that edit.
 
 ## Older plans
 
-Plans opened before catalog 0.9.18 may omit the `handbook-`
-prefix. This is the first handbook-update in this repo. Those
-plans were found by what they change, not by the prefix. After
-the handbook plans opened for 0.9.18 are finished, later
-handbook plans use the prefix.
+The handbook plans opened for 0.9.18 are finished and
+archived. They are handbook-xdg-homes,
+handbook-device-plugin-split, and handbook-core-index.
+Later handbook plans use the `handbook-` prefix. Those
+archives were not moved.
 
-[cut-selection](../cut-selection/plan.md) changes which SVG
-objects a cut opens. It does not disagree with the installed
-handbook. It was not rewritten.
+Plans read this update:
 
-[cli-install-update-data](../cli-install-update-data/plan.md)
-is the optional install CLI. It names the default device file
-`~/.config/inkcut/inkcut.device.json`. That path is still the
-one when neither `INKCUT_CONFIG_HOME` nor `XDG_CONFIG_HOME` is
-set. It was not rewritten. The home rule is the XDG plan above.
+- [_bugs](../_bugs/plan.md) does not disagree with the
+  installed handbook. It was not rewritten.
+- [cut-selection](../cut-selection/plan.md) changes which
+  SVG objects a cut opens. It was not rewritten.
+- [device-error](../device-error/plan.md) removes an unused
+  class. It was not rewritten.
+- [cli-install-update-data](../cli-install-update-data/plan.md)
+  names the default device file
+  `~/.config/inkcut/inkcut.device.json`. That path is still
+  the one when neither `INKCUT_CONFIG_HOME` nor
+  `XDG_CONFIG_HOME` is set. It does not tell the app to pin
+  state without an install. It was not rewritten. If that
+  optional install is built later, recording data and state
+  belongs to that plan.
 
-No file-size plan said 1000 lines. None was dropped. Nothing
-was taken off [`priority.md`](../../priority.md).
+Nothing else in the repo lags this rule. Config, cache, and
+runtime already resolve every run. `runtime_dir` fails when
+both runtime variables are unset and does not use `/tmp`.
+`data_home()` already resolves each run. Logs already go
+through `state_home()`. Plugin JSON stays in the config
+home, which is `~/.config/inkcut/{plugin id}.json` when both
+config variables are unset. The disk transport's temp
+directory is job output, not the runtime home. `~/.ssh` and
+`~/.gitconfig` are not this rule.
+
+Nothing was taken off [`priority.md`](../../priority.md).
+`handbook-xdg` was not added to it.
 
 ## Guide
 
-Follow [Handbook](../../handbook.md), section Handbook updates
-and section Source files. The home rule is
-[Scripting](../../installed/scripting.md), section XDG directory
-variables. Do not copy them.
+Follow [Handbook](../../handbook.md), section Handbook
+updates. The home rule is
+[Scripting](../../installed/scripting.md), section XDG
+directory variables. Do not copy them.
 
 ## Checks
 
-`agents/installed/.meta.toml` has `catalog_version` 0.9.18.
-`agents/handbook.md` has the Source files counts from this range
-and the Handbook updates section. The topic plans above exist
-and are absent from [`priority.md`](../../priority.md).
+`agents/installed/.meta.toml` has `catalog_version` 0.9.19.
+Scripting is 2.10.0. `agents/handbook.md` still has the
+Handbook updates section.
+[handbook-xdg](../handbook-xdg/plan.md) exists and is absent
+from [`priority.md`](../../priority.md).
